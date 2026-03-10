@@ -1,4 +1,23 @@
+# --- Backend (Python) ---
 backend/venv/
-__pycache__/
-*.pyc
-.env
+backend/.venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.env
+backend/*.env
+backend/.env.*           # If you have .env.local, .env.test, etc.
+
+# --- Frontend (Node) ---
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env
+frontend/.env.*
+frontend/.parcel-cache/  # if using parcel
+frontend/.vite/          # Vite cache folder
+frontend/.next/          # Next.js build output (if ever used)
+
+# --- General / Optional ---
+*.log
+.DS_Store
+Thumbs.db
