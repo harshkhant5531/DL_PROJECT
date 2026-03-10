@@ -9,8 +9,10 @@ const API_ENDPOINT = configuredBackendBase
 const WebcamFeed = ({ onGazeDataUpdate }) => {
   const webcamRef = useRef(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const warningCountRef = useRef(0);
   const [eyeTarget, setEyeTarget] = useState({ x: 0.5, y: 0.5 });
   const [eyeBoxes, setEyeBoxes] = useState({ left: null, right: null });
+  const [eyeIrises, setEyeIrises] = useState({ left: null, right: null });
   const consecutiveAwayRef = useRef(0);
 
   const capture = useCallback(async () => {
@@ -50,6 +52,10 @@ const WebcamFeed = ({ onGazeDataUpdate }) => {
           setEyeBoxes({
             left: data.left_eye_box,
             right: data.right_eye_box
+          });
+          setEyeIrises({
+            left: data.left_iris,
+            right: data.right_iris
           });
           onGazeDataUpdate(data);
         } catch (error) {
@@ -95,23 +101,65 @@ const WebcamFeed = ({ onGazeDataUpdate }) => {
         />
         {eyeBoxes.left && (
           <div
-            className="absolute border border-green-400/60 bg-green-400/5 transition-all duration-150"
+            className="absolute border-2 border-green-400/80 transition-all duration-150 overflow-hidden"
             style={{
               left: `${eyeBoxes.left[0] * 100}%`,
               top: `${eyeBoxes.left[1] * 100}%`,
               width: `${eyeBoxes.left[2] * 100}%`,
               height: `${eyeBoxes.left[3] * 100}%`,
+              borderRadius: '2px',
+              boxShadow: '0 0 10px rgba(74, 222, 128, 0.2)',
             }}
-          />
+          >
+            <div className="absolute -top-5 left-0 text-[10px] font-bold text-green-400 bg-black/40 px-1 rounded">EYE L</div>
+            {/* Scanning Line */}
+            <div className="absolute w-full h-0.5 bg-green-400/50 shadow-[0_0_5px_#4ade80] top-0 animate-scan" />
+            {/* Corner pieces */}
+            <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-green-400" />
+            <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-green-400" />
+            <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-green-400" />
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-green-400" />
+          </div>
         )}
         {eyeBoxes.right && (
           <div
-            className="absolute border border-green-400/60 bg-green-400/5 transition-all duration-150"
+            className="absolute border-2 border-green-400/80 transition-all duration-150 overflow-hidden"
             style={{
               left: `${eyeBoxes.right[0] * 100}%`,
               top: `${eyeBoxes.right[1] * 100}%`,
               width: `${eyeBoxes.right[2] * 100}%`,
               height: `${eyeBoxes.right[3] * 100}%`,
+              borderRadius: '2px',
+              boxShadow: '0 0 10px rgba(74, 222, 128, 0.2)',
+            }}
+          >
+            <div className="absolute -top-5 left-0 text-[10px] font-bold text-green-400 bg-black/40 px-1 rounded">EYE R</div>
+            {/* Scanning Line */}
+            <div className="absolute w-full h-0.5 bg-green-400/50 shadow-[0_0_5px_#4ade80] top-0 animate-scan" />
+            <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-green-400" />
+            <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-green-400" />
+            <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-green-400" />
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-green-400" />
+          </div>
+        )}
+        {/* Iris Dots */}
+        {eyeIrises.left && (
+          <div
+            className="absolute w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)] transition-all duration-75"
+            style={{
+              left: `${eyeIrises.left[0] * 100}%`,
+              top: `${eyeIrises.left[1] * 100}%`,
+              transform: "translate(-50%, -50%)",
+            }}
+          />
+        )}
+        {eyeIrises.right && (
+          <div
+            className="absolute w-1.5 h-1.5 bg-cyan-400 rounded-full shadow-[0_0_8px_rgba(34,211,238,0.8)] transition-all duration-75"
+            style={{
+              left: `${eyeIrises.right[0] * 100}%`,
+              top: `${eyeIrises.right[1] * 100}%`,
+              transform: "translate(-50%, -50%)",
             }}
           />
         )}

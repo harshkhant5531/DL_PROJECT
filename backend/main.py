@@ -61,9 +61,10 @@ app.add_middleware(
 )
 
 try:
-    gaze_model = load_model("gaze_model.pth")
+    model_path = os.path.join(os.path.dirname(__file__), "gaze_model.pth")
+    gaze_model = load_model(model_path)
 except Exception as e:
-    print(f"Failed to load GazeNet model: {e}")
+    print(f"Failed to load GazeNet model at {model_path}: {e}")
     gaze_model = None
 
 class FrameRequest(BaseModel):
@@ -81,6 +82,8 @@ class ProcessResponse(BaseModel):
     eye_target_y: float = 0.5
     left_eye_box: Optional[List[float]] = None
     right_eye_box: Optional[List[float]] = None
+    left_iris: Optional[List[float]] = None
+    right_iris: Optional[List[float]] = None
     error: Optional[str] = None
     warning_message: Optional[str] = None
 
@@ -151,6 +154,8 @@ async def api_process_frame(request: FrameRequest):
     eye_target_y = float((meta or {}).get("iris_center_y", 0.5))
     left_box = (meta or {}).get("left_eye_box")
     right_box = (meta or {}).get("right_eye_box")
+    left_iris = (meta or {}).get("left_iris")
+    right_iris = (meta or {}).get("right_iris")
 
     eye_target_x = max(0.0, min(1.0, eye_target_x))
     eye_target_y = max(0.0, min(1.0, eye_target_y))
@@ -215,6 +220,8 @@ async def api_process_frame(request: FrameRequest):
         eye_target_y=eye_target_y,
         left_eye_box=left_box,
         right_eye_box=right_box,
+        left_iris=left_iris,
+        right_iris=right_iris,
         warning_message=warning_message
     )
 

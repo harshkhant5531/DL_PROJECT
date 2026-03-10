@@ -195,6 +195,9 @@ def process_frame(b64_image):
         left_tensor = preprocess(left_eye_img)
         right_tensor = preprocess(right_eye_img)
 
+        r_iris_x, r_iris_y = _mean_landmark(landmarks, RIGHT_IRIS_INDICES)
+        l_iris_x, l_iris_y = _mean_landmark(landmarks, LEFT_IRIS_INDICES)
+
         meta = {
             "head_pose": head_pose,
             "nose_ratio": float(nose_ratio),
@@ -204,6 +207,8 @@ def process_frame(b64_image):
             "iris_center_y": float(iris_center[1]),
             "left_eye_box": left_box,
             "right_eye_box": right_box,
+            "left_iris": [float(l_iris_x), float(l_iris_y)],
+            "right_iris": [float(r_iris_x), float(r_iris_y)],
         }
         
         return left_tensor, right_tensor, None, meta
