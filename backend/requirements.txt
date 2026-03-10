@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+torch
+torchvision
+opencv-python
+mediapipe
+python-multipart
