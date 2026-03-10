@@ -9,8 +9,26 @@ Currently, two official plugins are available:
 
 ## React Compiler
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+# Frontend Setup
 
-## Expanding the ESLint configuration
+## Run Locally
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Start backend first on port 8000.
+2. Run frontend:
+
+```bash
+npm install
+npm run dev
+```
+
+The app calls `/api/process_frame` and Vite proxies that to `http://127.0.0.1:8000` in development.
+
+## Custom Backend URL
+
+If backend is running on another host/port, create a `.env` file in `frontend`:
+
+```env
+VITE_BACKEND_URL=http://127.0.0.1:8000
+```
+
+When `VITE_BACKEND_URL` is set, frontend calls that URL directly.

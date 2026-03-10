@@ -8,6 +8,8 @@ import BehaviorTimeline from "./components/BehaviorTimeline";
 import AttentionScoreMeter from "./components/AttentionScoreMeter";
 import MCQExam from "./components/MCQExam";
 
+const ALERT_DEDUP_MS = 4000;
+
 function App() {
   const [gazeData, setGazeData] = useState({
     gaze_direction: "center",
@@ -23,25 +25,30 @@ function App() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isTabFocused, setIsTabFocused] = useState(true);
+  const lastEventRef = useRef({ message: "", at: 0 });
+
+  const pushEvent = (message) => {
+    if (!examStarted) return;
+
+    const now = Date.now();
+    const last = lastEventRef.current;
+    if (last.message === message && now - last.at < ALERT_DEDUP_MS) {
+      return;
+    }
+
+    lastEventRef.current = { message, at: now };
+    setEvents((prev) => [...prev, { time: new Date(now), message }]);
+  };
 
   useEffect(() => {
     if (gazeData.warning_message) {
-      setEvents((prev) => [
-        ...prev,
-        { time: new Date(), message: gazeData.warning_message },
-      ]);
+      pushEvent(gazeData.warning_message);
     }
-  }, [gazeData.warning_message]);
+  }, [gazeData.warning_message, examStarted]);
 
   useEffect(() => {
     if (examStarted && gazeData.attention_score === 0) {
-      setEvents((prev) => [
-        ...prev,
-        {
-          time: new Date(),
-          message: "Attention dropped to 0 — exam paused.",
-        },
-      ]);
+      pushEvent("Attention dropped to 0 - exam paused.");
       setExamStarted(false);
     }
   }, [examStarted, gazeData.attention_score]);
@@ -50,26 +57,24 @@ function App() {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => {
       setIsOnline(false);
-      setEvents((prev) => [
-        ...prev,
-        { time: new Date(), message: "Internet connection lost!" },
-      ]);
+      pushEvent("Internet connection lost.");
     };
 
     const handleVisibilityChange = () => {
       if (document.hidden && examStarted) {
         setIsTabFocused(false);
-        setEvents((prev) => [
-          ...prev,
-          { time: new Date(), message: "User switched away from exam tab!" },
-        ]);
+        pushEvent("User switched away from exam tab.");
       } else {
         setIsTabFocused(true);
       }
     };
 
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement);
+      const full = !!document.fullscreenElement;
+      setIsFullscreen(full);
+      if (examStarted && !full) {
+        pushEvent("Fullscreen mode exited during exam.");
+      }
     };
 
     window.addEventListener("online", handleOnline);
@@ -94,6 +99,64 @@ function App() {
       document.exitFullscreen();
     }
   };
+
+  const deriveActiveAlert = () => {
+    if (!examStarted) {
+      return {
+        warning: false,
+        severity: "low",
+        message: "All good! Keep your eyes on the screen.",
+      };
+    }
+
+    if (!isOnline) {
+      return {
+        warning: true,
+        severity: "high",
+        message: "Internet is offline. Reconnect immediately.",
+      };
+    }
+
+    if (!isTabFocused) {
+      return {
+        warning: true,
+        severity: "high",
+        message: "You must return to the exam tab immediately!",
+      };
+    }
+
+    if (!isFullscreen) {
+      return {
+        warning: true,
+        severity: "medium",
+        message: "Fullscreen exited. Return to fullscreen mode.",
+      };
+    }
+
+    if (gazeData.error) {
+      return {
+        warning: true,
+        severity: "high",
+        message: gazeData.warning_message || "Monitoring error detected.",
+      };
+    }
+
+    if (gazeData.warning) {
+      return {
+        warning: true,
+        severity: gazeData.cheating_risk === "high" ? "high" : "medium",
+        message: gazeData.warning_message || "Suspicious behavior detected.",
+      };
+    }
+
+    return {
+      warning: false,
+      severity: "low",
+      message: "All good! Keep your eyes on the screen.",
+    };
+  };
+
+  const activeAlert = deriveActiveAlert();
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans transition-all duration-300">
@@ -185,13 +248,9 @@ function App() {
             </div>
 
             <WarningAlert
-              warning={gazeData.warning || !isTabFocused}
-              message={
-                !isTabFocused
-                  ? "You must return to the exam tab immediately!"
-                  : gazeData.warning_message ||
-                    "All good! Keep your eyes on the screen."
-              }
+              warning={activeAlert.warning}
+              severity={activeAlert.severity}
+              message={activeAlert.message}
             />
 
             {examStarted && (

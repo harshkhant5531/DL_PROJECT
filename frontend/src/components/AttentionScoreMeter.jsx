@@ -11,8 +11,8 @@ const AttentionScoreMeter = ({ score }) => {
   return (
     <div className="flex flex-col items-center">
       <div className="flex items-center gap-2 mb-6">
-        <Activity className="text-blue-500" />
-        <h2 className="text-lg font-semibold text-gray-700">Attention Score</h2>
+        <Activity className="text-indigo-600" />
+        <h2 className="text-lg font-semibold text-gray-800">Integrity Points</h2>
       </div>
 
       <div className="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
@@ -49,7 +49,7 @@ const AttentionScoreMeter = ({ score }) => {
           <span className="text-gray-500 text-xs font-bold uppercase tracking-wider">/ 100</span>
         </div>
       </div>
-      <p className="mt-4 text-sm text-gray-500">Live Focus Metric</p>
+      <p className="mt-4 text-sm text-gray-400 font-medium">Real-time Trust Factor</p>
     </div>
   );
 };
