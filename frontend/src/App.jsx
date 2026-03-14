@@ -7,6 +7,7 @@ import ExamTimer from "./components/ExamTimer";
 import BehaviorTimeline from "./components/BehaviorTimeline";
 import AttentionScoreMeter from "./components/AttentionScoreMeter";
 import MCQExam from "./components/MCQExam";
+import BlockingModal from "./components/BlockingModal";
 
 const ALERT_DEDUP_MS = 4000;
 
@@ -72,7 +73,6 @@ function App() {
 
   useEffect(() => {
     if (examStarted && gazeData.attention_score === 0) {
-      alert("Your exam can be blocked");
       pushEvent("Attention dropped to 0 - exam blocked.");
       setBlockReason("Your integrity score dropped to zero.");
       setExamStarted(false);
@@ -82,7 +82,6 @@ function App() {
 
   useEffect(() => {
     if (examStarted && violationCount >= 10) {
-      alert("Exam Blocked: You have exceeded the limit of 10 violations.");
       setBlockReason("Maximum violation limit (10) exceeded.");
       setExamStarted(false);
       setIsBlocked(true);
@@ -110,7 +109,6 @@ function App() {
           pushEvent(`User switched away from exam tab (${nextCount}/2).`);
           
           if (nextCount >= 2) {
-            alert("Your exam is blocked: Maximum tab switches exceeded.");
             setBlockReason("Maximum tab switch limit (2) exceeded.");
             setIsBlocked(true);
             setExamStarted(false);
@@ -378,6 +376,11 @@ function App() {
           </div>
         </div>
       </main>
+
+      <BlockingModal 
+        isOpen={isBlocked} 
+        reason={blockReason} 
+      />
     </div>
   );
 }
