@@ -22,13 +22,18 @@ function App() {
   const [events, setEvents] = useState([]);
   const [examStarted, setExamStarted] = useState(false);
 
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockReason, setBlockReason] = useState("");
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isTabFocused, setIsTabFocused] = useState(true);
+  const [tabSwitchCount, setTabSwitchCount] = useState(0);
+  const [violationCount, setViolationCount] = useState(0);
+  const webcamRef = useRef(null);
   const lastEventRef = useRef({ message: "", at: 0 });
 
   const pushEvent = (message) => {
-    if (!examStarted) return;
+    if (!examStarted || isBlocked) return;
 
     const now = Date.now();
     const last = lastEventRef.current;
@@ -37,21 +42,52 @@ function App() {
     }
 
     lastEventRef.current = { message, at: now };
-    setEvents((prev) => [...prev, { time: new Date(now), message }]);
+    const event = { time: new Date(now), message };
+    setEvents((prev) => [...prev, event]);
+
+    // Track if this is a violation/penalty event
+    const lowerMsg = message.toLowerCase();
+    const isViolation = lowerMsg.includes("suspicious") || 
+                        lowerMsg.includes("risk") || 
+                        lowerMsg.includes("switched") || 
+                        lowerMsg.includes("offline") ||
+                        lowerMsg.includes("error") ||
+                        lowerMsg.includes("gaze") ||
+                        lowerMsg.includes("attention");
+    
+    if (isViolation) {
+      setViolationCount(prev => prev + 1);
+    }
   };
 
+  // Watch for any warning or error in gazeData
   useEffect(() => {
-    if (gazeData.warning_message) {
-      pushEvent(gazeData.warning_message);
+    if (examStarted && !isBlocked) {
+      if (gazeData.warning || gazeData.error) {
+        const msg = gazeData.warning_message || gazeData.error || "Suspicious behavior detected.";
+        pushEvent(msg);
+      }
     }
-  }, [gazeData.warning_message, examStarted]);
+  }, [gazeData, examStarted, isBlocked]); // Watch the whole gazeData object for new frames
 
   useEffect(() => {
     if (examStarted && gazeData.attention_score === 0) {
-      pushEvent("Attention dropped to 0 - exam paused.");
+      alert("Your exam can be blocked");
+      pushEvent("Attention dropped to 0 - exam blocked.");
+      setBlockReason("Your integrity score dropped to zero.");
       setExamStarted(false);
+      setIsBlocked(true);
     }
   }, [examStarted, gazeData.attention_score]);
+
+  useEffect(() => {
+    if (examStarted && violationCount >= 10) {
+      alert("Exam Blocked: You have exceeded the limit of 10 violations.");
+      setBlockReason("Maximum violation limit (10) exceeded.");
+      setExamStarted(false);
+      setIsBlocked(true);
+    }
+  }, [violationCount, examStarted]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -63,7 +99,24 @@ function App() {
     const handleVisibilityChange = () => {
       if (document.hidden && examStarted) {
         setIsTabFocused(false);
-        pushEvent("User switched away from exam tab.");
+        
+        // Decrease score for violation
+        if (webcamRef.current) {
+          webcamRef.current.addPenalty(15); 
+        }
+
+        setTabSwitchCount((prev) => {
+          const nextCount = prev + 1;
+          pushEvent(`User switched away from exam tab (${nextCount}/2).`);
+          
+          if (nextCount >= 2) {
+            alert("Your exam is blocked: Maximum tab switches exceeded.");
+            setBlockReason("Maximum tab switch limit (2) exceeded.");
+            setIsBlocked(true);
+            setExamStarted(false);
+          }
+          return nextCount;
+        });
       } else {
         setIsTabFocused(true);
       }
@@ -224,26 +277,45 @@ function App() {
             <div className="relative rounded-xl overflow-hidden shadow-inner bg-slate-900 aspect-video flex items-center justify-center border border-gray-200 group">
               {!examStarted ? (
                 <div className="text-white text-center p-8">
-                  <MonitorDot
-                    size={48}
-                    className="mx-auto text-blue-400 mb-4 opacity-70"
-                  />
-                  <p className="mb-6 text-gray-300">
-                    Camera permission and AI initialization required.
-                  </p>
-
-                  <button
-                    onClick={() => {
-                      setExamStarted(true);
-                      toggleFullscreen();
-                    }}
-                    className="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-8 rounded-full shadow-lg shadow-blue-500/30 transition-all transform hover:scale-105 active:scale-95"
-                  >
-                    Begin Exam Securely
-                  </button>
+                  {isBlocked ? (
+                    <>
+                      <div className="bg-red-500/20 p-4 rounded-xl mb-6 border border-red-500/50">
+                        <MonitorDot
+                          size={48}
+                          className="mx-auto text-red-500 mb-4 animate-pulse"
+                        />
+                        <h3 className="text-2xl font-bold text-red-100 mb-2">
+                          EXAM BLOCKED
+                        </h3>
+                        <p className="text-red-200">
+                          {blockReason || "Your integrity score dropped to zero."} This session is
+                          permanently disabled.
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <MonitorDot
+                        size={48}
+                        className="mx-auto text-blue-400 mb-4 opacity-70"
+                      />
+                      <p className="mb-6 text-gray-300">
+                        Camera permission and AI initialization required.
+                      </p>
+                      <button
+                        onClick={() => {
+                          setExamStarted(true);
+                          toggleFullscreen();
+                        }}
+                        className="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-8 rounded-full shadow-lg shadow-blue-500/30 transition-all transform hover:scale-105 active:scale-95"
+                      >
+                        Begin Exam Securely
+                      </button>
+                    </>
+                  )}
                 </div>
               ) : (
-                <WebcamFeed onGazeDataUpdate={setGazeData} />
+                <WebcamFeed ref={webcamRef} onGazeDataUpdate={setGazeData} />
               )}
             </div>
 
@@ -296,6 +368,12 @@ function App() {
 
           <div className="bg-white p-6 shadow-xl shadow-blue-900/5 rounded-2xl border border-gray-100 flex-1 relative overflow-hidden flex flex-col">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-400 to-red-500"></div>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-gray-700">Violation Timeline</h2>
+              <span className={`px-2 py-1 rounded text-xs font-bold ${violationCount > 7 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
+                Violations: {violationCount}/10
+              </span>
+            </div>
             <BehaviorTimeline events={events} />
           </div>
         </div>

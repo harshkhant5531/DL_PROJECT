@@ -179,19 +179,17 @@ async def api_process_frame(request: FrameRequest):
     
     # Weighted scoring smooths transient noise while still penalizing sustained look-away.
     if direction == "center":
-        # Recover faster (reward good behavior)
-        risk_score = clamp_risk(risk_score - (POLICY["recover_center"] * 2))
+        # Do not recover score (integrity point stays same)
+        pass
     elif head_pose == "sideways_extreme" and direction in {"left", "right"}:
-        # Do not penalize strong side turns; often caused by real-world brief announcements.
-        risk_score = clamp_risk(risk_score - 2)
+        # Do not recover score (neutral)
+        pass
     elif direction == "down":
-        # GRACE BUFFER: Only penalize if away for more than 2 frames
-        if consecutive_away > 2:
-            risk_score = clamp_risk(risk_score + POLICY["penalty_down"])
+        # Penalize immediately for downward gaze
+        risk_score = clamp_risk(risk_score + POLICY["penalty_down"])
     else:
-        # GRACE BUFFER: Side/Up gaze (more suspicious) - penalize after 1 frame
-        if consecutive_away > 1:
-            risk_score = clamp_risk(risk_score + POLICY["penalty_side_or_up"])
+        # Penalize immediately for side/up gaze
+        risk_score = clamp_risk(risk_score + POLICY["penalty_side_or_up"])
 
     cheating_risk = risk_to_level(risk_score)
     warning = cheating_risk in {"medium", "high"}

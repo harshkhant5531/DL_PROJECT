@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
+import React, { useRef, useCallback, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import Webcam from "react-webcam";
 
 const configuredBackendBase = (import.meta.env.VITE_BACKEND_URL || "").trim();
@@ -6,7 +6,7 @@ const API_ENDPOINT = configuredBackendBase
   ? `${configuredBackendBase.replace(/\/$/, "")}/api/process_frame`
   : "/api/process_frame";
 
-const WebcamFeed = ({ onGazeDataUpdate }) => {
+const WebcamFeed = forwardRef(({ onGazeDataUpdate }, ref) => {
   const webcamRef = useRef(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const warningCountRef = useRef(0);
@@ -14,6 +14,12 @@ const WebcamFeed = ({ onGazeDataUpdate }) => {
   const [eyeBoxes, setEyeBoxes] = useState({ left: null, right: null });
   const [eyeIrises, setEyeIrises] = useState({ left: null, right: null });
   const consecutiveAwayRef = useRef(0);
+  
+  useImperativeHandle(ref, () => ({
+    addPenalty: (amount = 5) => {
+      warningCountRef.current = Math.min(100, warningCountRef.current + amount);
+    }
+  }));
 
   const capture = useCallback(async () => {
     if (webcamRef.current && !isProcessing) {
@@ -166,6 +172,6 @@ const WebcamFeed = ({ onGazeDataUpdate }) => {
       </div>
     </div>
   );
-};
+});
 
 export default WebcamFeed;
