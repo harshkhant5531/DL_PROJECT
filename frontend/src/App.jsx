@@ -9,7 +9,7 @@ import AttentionScoreMeter from "./components/AttentionScoreMeter";
 import MCQExam from "./components/MCQExam";
 import BlockingModal from "./components/BlockingModal";
 
-const ALERT_DEDUP_MS = 4000;
+const ALERT_DEDUP_MS = 1500;
 
 function App() {
   const [gazeData, setGazeData] = useState({
@@ -32,13 +32,16 @@ function App() {
   const [violationCount, setViolationCount] = useState(0);
   const webcamRef = useRef(null);
   const lastEventRef = useRef({ message: "", at: 0 });
+  const lastWarningStateRef = useRef(false);
 
-  const pushEvent = (message) => {
+  const pushEvent = (message, force = false) => {
     if (!examStarted || isBlocked) return;
 
     const now = Date.now();
     const last = lastEventRef.current;
-    if (last.message === message && now - last.at < ALERT_DEDUP_MS) {
+    
+    // Only deduplicate if it's the same message and not forced
+    if (!force && last.message === message && now - last.at < ALERT_DEDUP_MS) {
       return;
     }
 
@@ -64,12 +67,19 @@ function App() {
   // Watch for any warning or error in gazeData
   useEffect(() => {
     if (examStarted && !isBlocked) {
-      if (gazeData.warning || gazeData.error) {
+      const isCurrentlyUnsafe = !!(gazeData.warning || gazeData.error);
+      
+      if (isCurrentlyUnsafe) {
         const msg = gazeData.warning_message || gazeData.error || "Suspicious behavior detected.";
-        pushEvent(msg);
+        
+        // If we just transitioned from safe to unsafe, force an instant update
+        const justBecameUnsafe = !lastWarningStateRef.current;
+        pushEvent(msg, justBecameUnsafe);
       }
+      
+      lastWarningStateRef.current = isCurrentlyUnsafe;
     }
-  }, [gazeData, examStarted, isBlocked]); // Watch the whole gazeData object for new frames
+  }, [gazeData, examStarted, isBlocked]);
 
   useEffect(() => {
     if (examStarted && gazeData.attention_score === 0) {
