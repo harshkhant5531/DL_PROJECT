@@ -52,12 +52,21 @@ POLICY = RISK_PROFILES[ACTIVE_POLICY]
 
 app = FastAPI()
 
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+# --- CORS CONFIGURATION ---
+raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
+if raw_origins == "*":
+    ALLOWED_ORIGINS = ["*"]
+    # Credentials MUST be False if origins is "*" to avoid 400 errors
+    ALLOW_CREDENTIALS = False 
+else:
+    # Clean up origins: split by comma and remove spaces/trailing slashes
+    ALLOWED_ORIGINS = [o.strip().rstrip('/') for o in raw_origins.split(",") if o.strip()]
+    ALLOW_CREDENTIALS = True
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=ALLOW_CREDENTIALS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -231,4 +240,7 @@ async def api_process_frame(request: FrameRequest):
     )
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Get port from environment variable (Render sets this automatically)
+    port = int(os.getenv("PORT", 8000))
+    # 'reload' should be False in production for better performance
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
