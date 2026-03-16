@@ -62,6 +62,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+async def root():
+    """Health check endpoint for Render."""
+    return {"status": "online", "message": "Exam Monitoring API is active"}
+
 try:
     model_path = os.path.join(os.path.dirname(__file__), "gaze_model.pth")
     gaze_model = load_model(model_path)
