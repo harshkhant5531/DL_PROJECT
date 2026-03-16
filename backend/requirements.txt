@@ -3,6 +3,6 @@ uvicorn
 pydantic
 torch
 torchvision
-opencv-python
+opencv-python-headless
 mediapipe
 python-multipart
