@@ -217,10 +217,13 @@ async def api_process_frame(request: FrameRequest):
 
     if head_pose == "sideways_extreme" and direction in {"left", "right"}:
         warning_message = "Head turned strongly sideways (announcement-safe mode)."
+    elif head_pose == "tilted_extreme":
+        warning_message = "Head tilted excessively up or down."
 
     attention_score = risk_to_attention(risk_score)
+    nose_ratio_v = (meta or {}).get("nose_ratio_v", 0.5)
     print(
-        f"DEBUG: Policy={ACTIVE_POLICY} | HeadPose={head_pose} (ratio={nose_ratio:.2f}) "
+        f"DEBUG: Policy={ACTIVE_POLICY} | HeadPose={head_pose} (H:{nose_ratio:.2f}, V:{nose_ratio_v:.2f}) "
         f"| Risk Score: {risk_score} | Calculated Score: {attention_score}"
     )
         
