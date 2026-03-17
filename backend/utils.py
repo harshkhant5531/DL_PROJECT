@@ -135,10 +135,10 @@ def estimate_gaze_from_landmarks(landmarks, nose_ratio):
     # If iris landmarks are unavailable, use head yaw as a fallback signal.
     if len(landmarks) < 478:
         if nose_ratio < 0.42:
-            return "left", 0.45, (0.35, 0.5)
+            return "left", 0.45, (0.35, 0.5), [-0.15, 0.0]
         if nose_ratio > 0.58:
-            return "right", 0.45, (0.65, 0.5)
-        return "center", 0.4, (0.5, 0.5)
+            return "right", 0.45, (0.65, 0.5), [0.15, 0.0]
+        return "center", 0.4, (0.5, 0.5), [0.0, 0.0]
 
     r_iris_x, r_iris_y = _mean_landmark(landmarks, RIGHT_IRIS_INDICES)
     l_iris_x, l_iris_y = _mean_landmark(landmarks, LEFT_IRIS_INDICES)
@@ -180,12 +180,14 @@ def estimate_gaze_from_landmarks(landmarks, nose_ratio):
     yaw_offset = nose_ratio - 0.5
     combined_h = (0.75 * h_offset) + (0.25 * yaw_offset)
 
-    if abs(combined_h) < 0.06 and abs(v_offset) < 0.08:
-        return "center", 0.75, (iris_center_x, iris_center_y)
+    if abs(combined_h) < 0.05 and abs(v_offset) < 0.05:
+        return "center", 0.9, (iris_center_x, iris_center_y), [float(combined_h), float(v_offset)]
 
     if abs(combined_h) >= abs(v_offset):
-        return ("right" if combined_h > 0 else "left"), 0.8, (iris_center_x, iris_center_y)
-    return ("down" if v_offset > 0 else "up"), 0.7, (iris_center_x, iris_center_y)
+        return ("right" if combined_h > 0 else "left"), 0.85, (iris_center_x, iris_center_y), [float(combined_h), float(v_offset)]
+    # Inverting Up/Down: positive v_offset (iris at bottom) is now Up, negative is Down.
+    # This matches the user's specific eye-landmark behavior.
+    return ("up" if v_offset > 0 else "down"), 0.85, (iris_center_x, iris_center_y), [float(combined_h), float(v_offset)]
 
 def process_frame(b64_image):
     try:
@@ -211,7 +213,7 @@ def process_frame(b64_image):
         landmarks = results.face_landmarks[0]
         head_pose, nose_ratio = estimate_head_pose(landmarks)
         pose_vector = get_3d_pose_vector(landmarks)
-        heuristic_direction, heuristic_confidence, iris_center = estimate_gaze_from_landmarks(landmarks, nose_ratio)
+        heuristic_direction, heuristic_confidence, iris_center, meta_heuristic_vec = estimate_gaze_from_landmarks(landmarks, nose_ratio)
         
         left_eye_img, left_box = crop_eye(rgb_img, landmarks, LEFT_EYE_INDICES)
         right_eye_img, right_box = crop_eye(rgb_img, landmarks, RIGHT_EYE_INDICES)
@@ -237,14 +239,20 @@ def process_frame(b64_image):
         r_iris_x, r_iris_y = _mean_landmark(landmarks, RIGHT_IRIS_INDICES)
         l_iris_x, l_iris_y = _mean_landmark(landmarks, LEFT_IRIS_INDICES)
 
+        l_center_x, l_center_y = _mean_landmark(landmarks, LEFT_EYE_INDICES)
+        r_center_x, r_center_y = _mean_landmark(landmarks, RIGHT_EYE_INDICES)
+
         meta = {
             "head_pose": head_pose,
             "nose_ratio": float(nose_ratio),
             "pose_vector": pose_vector,
             "heuristic_direction": heuristic_direction,
             "heuristic_confidence": float(heuristic_confidence),
+            "heuristic_vector": (meta_heuristic_vec if 'meta_heuristic_vec' in locals() else [0.0, 0.0]),
             "iris_center_x": float(iris_center[0]),
             "iris_center_y": float(iris_center[1]),
+            "left_eye_center": [float(l_center_x), float(l_center_y)],
+            "right_eye_center": [float(r_center_x), float(r_center_y)],
             "left_eye_box": left_box,
             "right_eye_box": right_box,
             "left_iris": [float(l_iris_x), float(l_iris_y)],

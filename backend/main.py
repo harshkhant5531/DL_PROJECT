@@ -5,6 +5,7 @@ from model import load_model, predict_gaze
 from utils import process_frame
 import uvicorn
 import os
+import torch
 from typing import Optional, List
 
 
@@ -84,8 +85,11 @@ class ProcessResponse(BaseModel):
     right_eye_box: Optional[List[float]] = None
     left_iris: Optional[List[float]] = None
     right_iris: Optional[List[float]] = None
+    left_eye_center: Optional[List[float]] = None
+    right_eye_center: Optional[List[float]] = None
     error: Optional[str] = None
     warning_message: Optional[str] = None
+    gaze_vector: Optional[List[float]] = None
 
 
 def clamp_risk(value: int) -> int:
@@ -143,7 +147,8 @@ async def api_process_frame(request: FrameRequest):
             eye_target_x=0.5,
             eye_target_y=0.5,
             error=error,
-            warning_message=error
+            warning_message=error,
+            gaze_vector=[0.0, 0.0, 0.0]
         )
         
     head_pose = (meta or {}).get("head_pose", "unknown")
@@ -156,21 +161,26 @@ async def api_process_frame(request: FrameRequest):
     right_box = (meta or {}).get("right_eye_box")
     left_iris = (meta or {}).get("left_iris")
     right_iris = (meta or {}).get("right_iris")
+    l_eye_center = (meta or {}).get("left_eye_center")
+    r_eye_center = (meta or {}).get("right_eye_center")
 
     eye_target_x = max(0.0, min(1.0, eye_target_x))
     eye_target_y = max(0.0, min(1.0, eye_target_y))
 
     pose_vector = (meta or {}).get("pose_vector", [0.0, 0.0, 0.0])
     
-    if heuristic_direction and heuristic_confidence >= 0.55:
+    # Always run the model even if heuristic is active, to provide calibration telemetry
+    pose_tensor = torch.tensor(pose_vector, dtype=torch.float32).unsqueeze(0)
+    model_dir, model_vec = predict_gaze(gaze_model, left, right, pose_tensor)
+    
+    if heuristic_direction and heuristic_confidence >= 0.40:
         direction = heuristic_direction
-        gaze_vec = [0.0, 0.0, 0.0]
         model_source = "heuristic"
     else:
-        # Convert pose_vector to tensor (1, 3)
-        pose_tensor = torch.tensor(pose_vector, dtype=torch.float32).unsqueeze(0)
-        direction, gaze_vec = predict_gaze(gaze_model, left, right, pose_tensor)
+        direction = model_dir
         model_source = "model"
+    
+    gaze_vec = model_vec
     
     print(
         f"DEBUG: Gaze Direction: {direction} | Source={model_source} "
@@ -226,7 +236,10 @@ async def api_process_frame(request: FrameRequest):
         right_eye_box=right_box,
         left_iris=left_iris,
         right_iris=right_iris,
-        warning_message=warning_message
+        left_eye_center=l_eye_center,
+        right_eye_center=r_eye_center,
+        warning_message=warning_message,
+        gaze_vector=gaze_vec
     )
 
 if __name__ == "__main__":

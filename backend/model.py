@@ -59,19 +59,38 @@ def predict_gaze(model, xl_tensor, xr_tensor, pose_tensor):
         # Many webcam streams are mirrored; default inversion keeps left/right intuitive.
         if INVERT_HORIZONTAL:
             yaw = -yaw
+        
+        print(f"DEBUG: Gaze Raw -> Pitch: {pitch:.4f}, Yaw: {yaw:.4f}")
 
-        # Prefer center when both axes are near zero to avoid one-sided drift.
-        # Thresholds might need calibration based on the new model's output range.
-        if abs(yaw) < X_DEADZONE and abs(pitch) < Y_DEADZONE:
+        # CUSTOM CALIBRATION BASED ON USER FEEDBACK:
+        # Center: 0.264, Down: 0.231, Up: 0.222
+        # Center is the largest value. Down is smaller. Up is smallest.
+        # This confirms that for the model: Higher Pitch = Higher on screen.
+        
+        # Let's shift Center (0.264) to 0.0
+        pitch -= 0.264
+        
+        # Now: Center: 0.0, Down: -0.033, Up: -0.042
+        # This is still very tight, but "Down" is now negative.
+        # BUT the user reported Down is detected as Up.
+        # So we MUST invert the string labels here too.
+
+        print(f"DEBUG: Calibrated Gaze -> Pitch: {pitch:.4f}, Yaw: {yaw:.4f}")
+
+        # Thresholds (Tighter for this user's limited range)
+        X_DZ = 0.15
+        Y_DZ = 0.015
+
+        if abs(yaw) < X_DZ and abs(pitch) < Y_DZ:
             direction = "center"
         elif abs(yaw) >= abs(pitch):
             direction = "right" if yaw > 0 else "left"
-        elif pitch < -Y_DEADZONE:
+        elif pitch < -Y_DZ: 
+            # Negative pitch is now "Down" for this specific setup
             direction = "down"
-        elif pitch > Y_DEADZONE:
+        elif pitch > Y_DZ:
             direction = "up"
         else:
             direction = "center"
 
-        # Return direction and a mock gaze vector for UI compatibility
         return direction, [yaw, pitch, 0.0]
