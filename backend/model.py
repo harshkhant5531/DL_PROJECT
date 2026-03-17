@@ -67,9 +67,9 @@ def predict_gaze(model, xl_tensor, xr_tensor, pose_tensor):
         elif abs(yaw) >= abs(pitch):
             direction = "right" if yaw > 0 else "left"
         elif pitch < -Y_DEADZONE:
-            direction = "up"
-        elif pitch > Y_DEADZONE:
             direction = "down"
+        elif pitch > Y_DEADZONE:
+            direction = "up"
         else:
             direction = "center"
 
