@@ -27,6 +27,14 @@ RIGHT_CHEEK_IDX = 454
 RIGHT_IRIS_INDICES = [468, 469, 470, 471, 472]
 LEFT_IRIS_INDICES = [473, 474, 475, 476, 477]
 
+# Extra indices for head pose and 3D vector calculation
+TOP_FOREHEAD_IDX = 10
+BOTTOM_CHIN_IDX = 152
+FOREHEAD = 10
+CHIN = 152
+LEFT_EYE_INNER = 263
+RIGHT_EYE_INNER = 133
+
 # Eye reference points for geometric gaze estimation.
 RIGHT_EYE_LEFT_CORNER = 33
 RIGHT_EYE_RIGHT_CORNER = 133
@@ -240,7 +248,8 @@ def process_frame(b64_image):
         if left_eye_img is None or right_eye_img is None:
             return None, None, "Eye region not visible", {
                 "head_pose": head_pose,
-                "nose_ratio": float(nose_ratios[0]),
+                "nose_ratio": float(nose_ratio[0]),
+                "nose_ratio_v": float(nose_ratio[1]),
             }
         
         # convert to grayscale, resize, scale
@@ -260,7 +269,8 @@ def process_frame(b64_image):
 
         meta = {
             "head_pose": head_pose,
-            "nose_ratio": float(nose_ratio),
+            "nose_ratio": float(nose_ratio[0]),
+            "nose_ratio_v": float(nose_ratio[1]),
             "heuristic_direction": heuristic_direction,
             "heuristic_confidence": float(heuristic_confidence),
             "iris_center_x": float(iris_center[0]),

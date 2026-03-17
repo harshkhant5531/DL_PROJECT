@@ -61,8 +61,8 @@ const MCQExam = ({ questions = DEFAULT_QUESTIONS, onFinish }) => {
   };
 
   return (
-    <div className="bg-white p-6 shadow-xl shadow-blue-900/5 rounded-2xl border border-gray-100">
-      <h2 className="text-lg font-semibold text-gray-700 mb-4">MCQ Exam</h2>
+    <div className="bg-white p-6 shadow-xl shadow-slate-200/50 rounded-2xl border border-slate-200">
+      <h2 className="text-lg font-black text-slate-800 uppercase tracking-tighter mb-4">Exam Module</h2>
       <div className="text-sm text-gray-500 mb-3">
         Question {current + 1} of {questions.length}
       </div>
@@ -81,14 +81,14 @@ const MCQExam = ({ questions = DEFAULT_QUESTIONS, onFinish }) => {
             <button
               key={idx}
               onClick={() => handleSelect(idx)}
-              className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+              className={`w-full text-left px-4 py-3 rounded-lg border transition-all shadow-sm ${
                 isCorrect
-                  ? "border-emerald-400 bg-emerald-50"
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-900"
                   : isWrong
-                    ? "border-rose-400 bg-rose-50"
+                    ? "border-rose-500 bg-rose-50 text-rose-900"
                     : isSelected
-                      ? "border-blue-400 bg-blue-50"
-                      : "border-gray-200 bg-white hover:bg-gray-50"
+                      ? "border-blue-500 bg-blue-50 text-blue-900"
+                      : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
               }`}
             >
               {opt}

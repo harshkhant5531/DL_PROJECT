@@ -18,6 +18,10 @@ const WebcamFeed = forwardRef(({ onGazeDataUpdate }, ref) => {
   useImperativeHandle(ref, () => ({
     addPenalty: (amount = 5) => {
       warningCountRef.current = Math.min(100, warningCountRef.current + amount);
+    },
+    resetAttention: () => {
+      warningCountRef.current = 0;
+      consecutiveAwayRef.current = 0;
     }
   }));
 
@@ -117,7 +121,7 @@ const WebcamFeed = forwardRef(({ onGazeDataUpdate }, ref) => {
               boxShadow: '0 0 10px rgba(74, 222, 128, 0.2)',
             }}
           >
-            <div className="absolute -top-5 left-0 text-[10px] font-bold text-green-400 bg-black/40 px-1 rounded">EYE L</div>
+            <div className="absolute -top-5 left-0 text-[10px] font-bold text-green-600 bg-white/60 backdrop-blur-sm px-1 rounded shadow-sm">EYE L</div>
             {/* Scanning Line */}
             <div className="absolute w-full h-0.5 bg-green-400/50 shadow-[0_0_5px_#4ade80] top-0 animate-scan" />
             {/* Corner pieces */}
@@ -139,7 +143,7 @@ const WebcamFeed = forwardRef(({ onGazeDataUpdate }, ref) => {
               boxShadow: '0 0 10px rgba(74, 222, 128, 0.2)',
             }}
           >
-            <div className="absolute -top-5 left-0 text-[10px] font-bold text-green-400 bg-black/40 px-1 rounded">EYE R</div>
+            <div className="absolute -top-5 left-0 text-[10px] font-bold text-green-600 bg-white/60 backdrop-blur-sm px-1 rounded shadow-sm">EYE R</div>
             {/* Scanning Line */}
             <div className="absolute w-full h-0.5 bg-green-400/50 shadow-[0_0_5px_#4ade80] top-0 animate-scan" />
             <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-green-400" />

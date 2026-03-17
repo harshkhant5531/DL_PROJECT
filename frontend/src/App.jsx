@@ -220,33 +220,33 @@ function App() {
   const activeAlert = deriveActiveAlert();
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-200 flex flex-col font-sans selection:bg-blue-500/30">
+    <div className="min-h-screen bg-slate-50 text-slate-700 flex flex-col font-sans selection:bg-blue-500/20">
       {/* HUD Navbar */}
-      <header className="bg-[#1e293b]/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-50 px-8 py-4 flex items-center justify-between shadow-2xl shadow-black/20">
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50 px-8 py-4 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="bg-blue-600/20 p-2 rounded-xl border border-blue-500/30 shadow-lg shadow-blue-500/10">
-            <MonitorDot className="text-blue-400" size={24} />
+          <div className="bg-blue-600/10 p-2 rounded-xl border border-blue-500/20 shadow-sm">
+            <MonitorDot className="text-blue-600" size={24} />
           </div>
           <div>
-            <h1 className="text-lg font-black text-white tracking-tighter uppercase italic leading-none">
+            <h1 className="text-lg font-black text-slate-900 tracking-tighter uppercase italic leading-none">
               Sentinel AI
             </h1>
-            <span className="text-[10px] text-blue-400 font-bold tracking-[0.3em] uppercase opacity-70">Proctoring Interface</span>
+            <span className="text-[10px] text-blue-600 font-bold tracking-[0.3em] uppercase opacity-70">Proctoring Interface</span>
           </div>
         </div>
 
         <div className="flex items-center gap-6">
           <div className={`hidden md:flex items-center gap-2 px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all 
-            ${isOnline ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"}`}>
+            ${isOnline ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : "bg-rose-500/10 text-rose-600 border-rose-500/20"}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
             {isOnline ? "Relay Online" : "Relay Offline"}
           </div>
 
-          <div className="h-8 w-px bg-white/5 mx-2" />
+          <div className="h-8 w-px bg-slate-200 mx-2" />
 
           <button
             onClick={toggleFullscreen}
-            className="p-2.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-white/10"
+            className="p-2.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all border border-transparent hover:border-slate-200"
             title="Toggle Secure View"
           >
             <Maximize size={18} />
@@ -268,15 +268,15 @@ function App() {
 
         {/* Main Observation Area */}
         <div className="lg:col-span-3 space-y-6">
-          <div className="bg-[#1e293b]/40 backdrop-blur-xl p-6 rounded-[2rem] border border-white/5 shadow-2xl flex flex-col relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-30 group-hover:opacity-100 transition-opacity" />
+          <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 flex flex-col relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/30 to-transparent opacity-30 group-hover:opacity-100 transition-opacity" />
 
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                  <Shield className="text-blue-400" size={16} />
+                <div className="w-8 h-8 rounded-lg bg-blue-500/5 flex items-center justify-center border border-blue-500/10">
+                  <Shield className="text-blue-500" size={16} />
                 </div>
-                <h2 className="text-sm font-black text-white uppercase tracking-widest">Video Telemetry</h2>
+                <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Video Telemetry</h2>
               </div>
 
               {examStarted && (
@@ -289,14 +289,14 @@ function App() {
               )}
             </div>
 
-            <div className="relative rounded-3xl overflow-hidden bg-slate-950 aspect-video flex items-center justify-center border border-white/5 ring-1 ring-white/5 shadow-inner group/vid">
+            <div className="relative rounded-3xl overflow-hidden bg-slate-100 aspect-video flex items-center justify-center border border-slate-200 shadow-inner group/vid">
               {!examStarted ? (
-                <div className="text-white text-center p-8">
+                <div className="text-slate-900 text-center p-8">
                   <MonitorDot
                     size={48}
-                    className="mx-auto text-blue-400 mb-4 opacity-70"
+                    className="mx-auto text-blue-500 mb-4 opacity-70"
                   />
-                  <p className="mb-6 text-gray-300">
+                  <p className="mb-6 text-slate-500">
                     Camera permission and AI initialization required.
                   </p>
 
@@ -305,7 +305,7 @@ function App() {
                       setExamStarted(true);
                       toggleFullscreen();
                     }}
-                    className="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-8 rounded-full shadow-lg shadow-blue-500/30 transition-all transform hover:scale-105 active:scale-95"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg shadow-blue-500/20 transition-all transform hover:scale-105 active:scale-95"
                   >
                     Begin Exam Securely
                   </button>
@@ -316,14 +316,14 @@ function App() {
 
               {/* Camera Scanning Overlay Effect */}
               {examStarted && (
-                <div className="absolute inset-0 pointer-events-none border-[12px] border-white/5 flex flex-col justify-between p-4">
+                <div className="absolute inset-0 pointer-events-none border-[12px] border-slate-400/5 flex flex-col justify-between p-4">
                   <div className="flex justify-between">
-                    <div className="w-6 h-6 border-t-2 border-l-2 border-white/20" />
-                    <div className="w-6 h-6 border-t-2 border-r-2 border-white/20" />
+                    <div className="w-6 h-6 border-t-2 border-l-2 border-slate-400/30" />
+                    <div className="w-6 h-6 border-t-2 border-r-2 border-slate-400/30" />
                   </div>
                   <div className="flex justify-between">
-                    <div className="w-6 h-6 border-b-2 border-l-2 border-white/20" />
-                    <div className="w-6 h-6 border-b-2 border-r-2 border-white/20" />
+                    <div className="w-6 h-6 border-b-2 border-l-2 border-slate-400/30" />
+                    <div className="w-6 h-6 border-b-2 border-r-2 border-slate-400/30" />
                   </div>
                 </div>
               )}
@@ -338,12 +338,12 @@ function App() {
             </div>
 
             {examStarted && (
-              <div className="mt-8 pt-8 border-t border-white/5">
+              <div className="mt-8 pt-8 border-t border-slate-100">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
-                    <ListChecks className="text-emerald-400" size={16} />
+                    <ListChecks className="text-emerald-600" size={16} />
                   </div>
-                  <h2 className="text-sm font-black text-white uppercase tracking-widest">Questionnaire Module</h2>
+                  <h2 className="text-sm font-black text-slate-800 uppercase tracking-widest">Questionnaire Module</h2>
                 </div>
                 <MCQExam
                   onFinish={({ score: finalScore, total }) => {
@@ -354,6 +354,12 @@ function App() {
                         message: `MCQ Terminal Completed. Final Score: ${finalScore}/${total}`,
                       },
                     ]);
+                    // Reset monitoring state when session ends
+                    setViolationCount(0);
+                    setTabSwitchCount(0);
+                    if (webcamRef.current) {
+                      webcamRef.current.resetAttention();
+                    }
                   }}
                 />
               </div>
@@ -364,9 +370,9 @@ function App() {
         {/* Analytics Sider */}
         <div className="lg:col-span-1 space-y-6 h-full flex flex-col">
           {/* Gaze HUD */}
-          <div className="bg-[#1e293b]/40 backdrop-blur-xl p-6 rounded-3xl border border-white/5 shadow-2xl relative overflow-hidden group">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full -mr-12 -mt-12 group-hover:bg-blue-500/10 transition-colors" />
-            <h2 className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+            <h2 className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-6 flex items-center gap-2">
               <Activity size={12} />
               Spatial Vectors
             </h2>
@@ -374,21 +380,27 @@ function App() {
           </div>
 
           {/* Integrity Meter */}
-          <div className="bg-[#1e293b]/40 backdrop-blur-xl p-6 rounded-3xl border border-white/5 shadow-2xl relative overflow-hidden">
-            <h2 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 relative overflow-hidden">
+            <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-6 flex items-center gap-2">
               <Shield size={12} />
               System Integrity
             </h2>
             <AttentionScoreMeter score={gazeData.attention_score} />
           </div>
 
-          <div className="bg-white p-6 shadow-xl shadow-blue-900/5 rounded-2xl border border-gray-100 flex-1 relative overflow-hidden flex flex-col">
+          <div className="bg-white p-6 shadow-xl shadow-slate-200/50 rounded-2xl border border-slate-200 flex-1 relative overflow-hidden flex flex-col">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-400 to-red-500"></div>
             <BehaviorTimeline events={events} />
-            <div className="absolute bottom-4 left-6 right-6 h-24 bg-gradient-to-t from-[#1e293b] to-transparent pointer-events-none" />
+            <div className="absolute bottom-4 left-6 right-6 h-24 bg-gradient-to-t from-white to-transparent pointer-events-none" />
           </div>
         </div>
       </main>
+
+      {/* Security Enforcement Modal */}
+      <BlockingModal 
+        isOpen={isBlocked} 
+        reason={blockReason} 
+      />
     </div>
   );
 }
