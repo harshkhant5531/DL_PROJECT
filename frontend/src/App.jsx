@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Maximize, Wifi, WifiOff, MonitorDot } from "lucide-react";
+import { Maximize, Wifi, WifiOff, MonitorDot, Shield, Activity, ListChecks, History } from "lucide-react";
 import WebcamFeed from "./components/WebcamFeed";
 import GazeIndicator from "./components/GazeIndicator";
 import WarningAlert from "./components/WarningAlert";
@@ -39,7 +39,7 @@ function App() {
 
     const now = Date.now();
     const last = lastEventRef.current;
-    
+
     // Only deduplicate if it's the same message and not forced
     if (!force && last.message === message && now - last.at < ALERT_DEDUP_MS) {
       return;
@@ -51,14 +51,14 @@ function App() {
 
     // Track if this is a violation/penalty event
     const lowerMsg = message.toLowerCase();
-    const isViolation = lowerMsg.includes("suspicious") || 
-                        lowerMsg.includes("risk") || 
-                        lowerMsg.includes("switched") || 
-                        lowerMsg.includes("offline") ||
-                        lowerMsg.includes("error") ||
-                        lowerMsg.includes("gaze") ||
-                        lowerMsg.includes("attention");
-    
+    const isViolation = lowerMsg.includes("suspicious") ||
+      lowerMsg.includes("risk") ||
+      lowerMsg.includes("switched") ||
+      lowerMsg.includes("offline") ||
+      lowerMsg.includes("error") ||
+      lowerMsg.includes("gaze") ||
+      lowerMsg.includes("attention");
+
     if (isViolation) {
       setViolationCount(prev => prev + 1);
     }
@@ -68,15 +68,15 @@ function App() {
   useEffect(() => {
     if (examStarted && !isBlocked) {
       const isCurrentlyUnsafe = !!(gazeData.warning || gazeData.error);
-      
+
       if (isCurrentlyUnsafe) {
         const msg = gazeData.warning_message || gazeData.error || "Suspicious behavior detected.";
-        
+
         // If we just transitioned from safe to unsafe, force an instant update
         const justBecameUnsafe = !lastWarningStateRef.current;
         pushEvent(msg, justBecameUnsafe);
       }
-      
+
       lastWarningStateRef.current = isCurrentlyUnsafe;
     }
   }, [gazeData, examStarted, isBlocked]);
@@ -108,16 +108,16 @@ function App() {
     const handleVisibilityChange = () => {
       if (document.hidden && examStarted) {
         setIsTabFocused(false);
-        
+
         // Decrease score for violation
         if (webcamRef.current) {
-          webcamRef.current.addPenalty(15); 
+          webcamRef.current.addPenalty(15);
         }
 
         setTabSwitchCount((prev) => {
           const nextCount = prev + 1;
           pushEvent(`User switched away from exam tab (${nextCount}/2).`);
-          
+
           if (nextCount >= 2) {
             setBlockReason("Maximum tab switch limit (2) exceeded.");
             setIsBlocked(true);
@@ -166,7 +166,7 @@ function App() {
       return {
         warning: false,
         severity: "low",
-        message: "All good! Keep your eyes on the screen.",
+        message: "Monitoring Standby",
       };
     }
 
@@ -174,7 +174,7 @@ function App() {
       return {
         warning: true,
         severity: "high",
-        message: "Internet is offline. Reconnect immediately.",
+        message: "Connectivity Failure",
       };
     }
 
@@ -182,7 +182,7 @@ function App() {
       return {
         warning: true,
         severity: "high",
-        message: "You must return to the exam tab immediately!",
+        message: "Tab Switch Detected",
       };
     }
 
@@ -190,7 +190,7 @@ function App() {
       return {
         warning: true,
         severity: "medium",
-        message: "Fullscreen exited. Return to fullscreen mode.",
+        message: "Fullscreen Required",
       };
     }
 
@@ -198,7 +198,7 @@ function App() {
       return {
         warning: true,
         severity: "high",
-        message: gazeData.warning_message || "Monitoring error detected.",
+        message: gazeData.warning_message || "Input Error",
       };
     }
 
@@ -206,142 +206,152 @@ function App() {
       return {
         warning: true,
         severity: gazeData.cheating_risk === "high" ? "high" : "medium",
-        message: gazeData.warning_message || "Suspicious behavior detected.",
+        message: gazeData.warning_message || "Suspicious Movement",
       };
     }
 
     return {
       warning: false,
       severity: "low",
-      message: "All good! Keep your eyes on the screen.",
+      message: "Secure Session Active",
     };
   };
 
   const activeAlert = deriveActiveAlert();
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans transition-all duration-300">
-      {/* Top Navbar Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <MonitorDot className="text-blue-600" size={28} />
-          <h1 className="text-xl md:text-2xl font-bold text-gray-800 tracking-tight">
-            AI Proctoring Dashboard
-          </h1>
+    <div className="min-h-screen bg-[#0f172a] text-slate-200 flex flex-col font-sans selection:bg-blue-500/30">
+      {/* HUD Navbar */}
+      <header className="bg-[#1e293b]/80 backdrop-blur-md border-b border-white/5 sticky top-0 z-50 px-8 py-4 flex items-center justify-between shadow-2xl shadow-black/20">
+        <div className="flex items-center gap-4">
+          <div className="bg-blue-600/20 p-2 rounded-xl border border-blue-500/30 shadow-lg shadow-blue-500/10">
+            <MonitorDot className="text-blue-400" size={24} />
+          </div>
+          <div>
+            <h1 className="text-lg font-black text-white tracking-tighter uppercase italic leading-none">
+              Sentinel AI
+            </h1>
+            <span className="text-[10px] text-blue-400 font-bold tracking-[0.3em] uppercase opacity-70">Proctoring Interface</span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4 md:gap-6">
-          <div
-            className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium border ${isOnline ? "bg-green-50 text-green-700 border-green-200" : "bg-red-50 text-red-700 border-red-200"}`}
-          >
-            {isOnline ? <Wifi size={16} /> : <WifiOff size={16} />}
-            {isOnline ? "Connected" : "Offline"}
+        <div className="flex items-center gap-6">
+          <div className={`hidden md:flex items-center gap-2 px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all 
+            ${isOnline ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-rose-500/10 text-rose-400 border-rose-500/20"}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isOnline ? "bg-emerald-500 animate-pulse" : "bg-rose-500"}`} />
+            {isOnline ? "Relay Online" : "Relay Offline"}
           </div>
+
+          <div className="h-8 w-px bg-white/5 mx-2" />
 
           <button
             onClick={toggleFullscreen}
-            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            title="Toggle Fullscreen"
+            className="p-2.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all border border-transparent hover:border-white/10"
+            title="Toggle Secure View"
           >
-            <Maximize size={20} />
+            <Maximize size={18} />
           </button>
 
           <ExamTimer isActive={examStarted} />
         </div>
       </header>
 
+      {/* Extreme Warning Banner */}
       {!isTabFocused && examStarted && (
-        <div className="bg-red-600 text-white text-center py-2 font-bold tracking-widest text-sm shadow-md animate-pulse">
-          WARNING: EXAM TAB IS NOT FOCUSED!
+        <div className="bg-rose-600 text-white text-center py-2 font-black tracking-[0.5em] text-[10px] shadow-2xl animate-[pulse_1s_infinite] border-b border-rose-500">
+          SYSTEM BREACH: TAB FOCUS LOST
         </div>
       )}
 
-      {/* Main Content Dashboard */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Video & Live Status */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-4 md:p-6 shadow-xl shadow-blue-900/5 rounded-2xl border border-gray-100 flex flex-col h-full">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                <span className="relative flex h-3 w-3">
-                  {examStarted && isOnline && !gazeData.warning ? (
-                    <>
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-                    </>
-                  ) : examStarted ? (
-                    <>
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                    </>
-                  ) : (
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-gray-300"></span>
-                  )}
-                </span>
-                Live Camera Feed
-              </h2>
+      {/* Main Grid */}
+      <main className="flex-1 w-full max-w-[1400px] mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+        {/* Main Observation Area */}
+        <div className="lg:col-span-3 space-y-6">
+          <div className="bg-[#1e293b]/40 backdrop-blur-xl p-6 rounded-[2rem] border border-white/5 shadow-2xl flex flex-col relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-30 group-hover:opacity-100 transition-opacity" />
+
+            <div className="flex justify-between items-center mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                  <Shield className="text-blue-400" size={16} />
+                </div>
+                <h2 className="text-sm font-black text-white uppercase tracking-widest">Video Telemetry</h2>
+              </div>
+
+              {examStarted && (
+                <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>Neural Link: Good</span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="relative rounded-xl overflow-hidden shadow-inner bg-slate-900 aspect-video flex items-center justify-center border border-gray-200 group">
+            <div className="relative rounded-3xl overflow-hidden bg-slate-950 aspect-video flex items-center justify-center border border-white/5 ring-1 ring-white/5 shadow-inner group/vid">
               {!examStarted ? (
                 <div className="text-white text-center p-8">
-                  {isBlocked ? (
-                    <>
-                      <div className="bg-red-500/20 p-4 rounded-xl mb-6 border border-red-500/50">
-                        <MonitorDot
-                          size={48}
-                          className="mx-auto text-red-500 mb-4 animate-pulse"
-                        />
-                        <h3 className="text-2xl font-bold text-red-100 mb-2">
-                          EXAM BLOCKED
-                        </h3>
-                        <p className="text-red-200">
-                          {blockReason || "Your integrity score dropped to zero."} This session is
-                          permanently disabled.
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <MonitorDot
-                        size={48}
-                        className="mx-auto text-blue-400 mb-4 opacity-70"
-                      />
-                      <p className="mb-6 text-gray-300">
-                        Camera permission and AI initialization required.
-                      </p>
-                      <button
-                        onClick={() => {
-                          setExamStarted(true);
-                          toggleFullscreen();
-                        }}
-                        className="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-8 rounded-full shadow-lg shadow-blue-500/30 transition-all transform hover:scale-105 active:scale-95"
-                      >
-                        Begin Exam Securely
-                      </button>
-                    </>
-                  )}
+                  <MonitorDot
+                    size={48}
+                    className="mx-auto text-blue-400 mb-4 opacity-70"
+                  />
+                  <p className="mb-6 text-gray-300">
+                    Camera permission and AI initialization required.
+                  </p>
+
+                  <button
+                    onClick={() => {
+                      setExamStarted(true);
+                      toggleFullscreen();
+                    }}
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 px-8 rounded-full shadow-lg shadow-blue-500/30 transition-all transform hover:scale-105 active:scale-95"
+                  >
+                    Begin Exam Securely
+                  </button>
                 </div>
               ) : (
                 <WebcamFeed ref={webcamRef} onGazeDataUpdate={setGazeData} />
               )}
+
+              {/* Camera Scanning Overlay Effect */}
+              {examStarted && (
+                <div className="absolute inset-0 pointer-events-none border-[12px] border-white/5 flex flex-col justify-between p-4">
+                  <div className="flex justify-between">
+                    <div className="w-6 h-6 border-t-2 border-l-2 border-white/20" />
+                    <div className="w-6 h-6 border-t-2 border-r-2 border-white/20" />
+                  </div>
+                  <div className="flex justify-between">
+                    <div className="w-6 h-6 border-b-2 border-l-2 border-white/20" />
+                    <div className="w-6 h-6 border-b-2 border-r-2 border-white/20" />
+                  </div>
+                </div>
+              )}
             </div>
 
-            <WarningAlert
-              warning={activeAlert.warning}
-              severity={activeAlert.severity}
-              message={activeAlert.message}
-            />
+            <div className="mt-6">
+              <WarningAlert
+                warning={activeAlert.warning}
+                severity={activeAlert.severity}
+                message={activeAlert.message}
+              />
+            </div>
 
             {examStarted && (
-              <div className="mt-6">
+              <div className="mt-8 pt-8 border-t border-white/5">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                    <ListChecks className="text-emerald-400" size={16} />
+                  </div>
+                  <h2 className="text-sm font-black text-white uppercase tracking-widest">Questionnaire Module</h2>
+                </div>
                 <MCQExam
                   onFinish={({ score: finalScore, total }) => {
                     setEvents((prev) => [
                       ...prev,
                       {
                         time: new Date(),
-                        message: `MCQ exam completed. Score: ${finalScore}/${total}`,
+                        message: `MCQ Terminal Completed. Final Score: ${finalScore}/${total}`,
                       },
                     ]);
                   }}
@@ -351,46 +361,34 @@ function App() {
           </div>
         </div>
 
-        {/* Right Column - Analytics & Indicators */}
-        <div className="space-y-6 flex flex-col">
-          <div className="bg-white p-6 shadow-xl shadow-blue-900/5 rounded-2xl border border-gray-100 text-center relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
-            <h2 className="text-lg font-semibold text-gray-700 mb-2">
-              Live AI Gaze Tracking
+        {/* Analytics Sider */}
+        <div className="lg:col-span-1 space-y-6 h-full flex flex-col">
+          {/* Gaze HUD */}
+          <div className="bg-[#1e293b]/40 backdrop-blur-xl p-6 rounded-3xl border border-white/5 shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full -mr-12 -mt-12 group-hover:bg-blue-500/10 transition-colors" />
+            <h2 className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <Activity size={12} />
+              Spatial Vectors
             </h2>
             <GazeIndicator direction={gazeData.gaze_direction} />
-            <div className="mt-4 pt-4 border-t border-gray-100 p-2 bg-gray-50 rounded-lg">
-              <p className="text-xs text-gray-500 uppercase tracking-widest mb-1">
-                Current State
-              </p>
-              <p className="font-bold text-gray-800 text-sm capitalize">
-                {gazeData.gaze_direction}
-              </p>
-            </div>
           </div>
 
-          <div className="bg-white p-6 shadow-xl shadow-blue-900/5 rounded-2xl border border-gray-100 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-teal-500"></div>
+          {/* Integrity Meter */}
+          <div className="bg-[#1e293b]/40 backdrop-blur-xl p-6 rounded-3xl border border-white/5 shadow-2xl relative overflow-hidden">
+            <h2 className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <Shield size={12} />
+              System Integrity
+            </h2>
             <AttentionScoreMeter score={gazeData.attention_score} />
           </div>
 
           <div className="bg-white p-6 shadow-xl shadow-blue-900/5 rounded-2xl border border-gray-100 flex-1 relative overflow-hidden flex flex-col">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-400 to-red-500"></div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-700">Violation Timeline</h2>
-              <span className={`px-2 py-1 rounded text-xs font-bold ${violationCount > 7 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'}`}>
-                Violations: {violationCount}/10
-              </span>
-            </div>
             <BehaviorTimeline events={events} />
+            <div className="absolute bottom-4 left-6 right-6 h-24 bg-gradient-to-t from-[#1e293b] to-transparent pointer-events-none" />
           </div>
         </div>
       </main>
-
-      <BlockingModal 
-        isOpen={isBlocked} 
-        reason={blockReason} 
-      />
     </div>
   );
 }

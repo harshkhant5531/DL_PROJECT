@@ -21,23 +21,21 @@ class GazeNet(nn.Module):
             nn.MaxPool2d(2)
         )
         
-        # Fully connected layers (64 * 9 * 15 * 2 = 17280)
+        # Fully connected layers
+        # Image features (64 * 9 * 15 * 2 = 17280) + Head Pose (3) = 17283
         self.fc = nn.Sequential(
-            nn.Linear(64 * 9 * 15 * 2, 128),
+            nn.Linear(64 * 9 * 15 * 2 + 3, 128),
             nn.ReLU(),
-            nn.Linear(128, 3)
+            nn.Linear(128, 2) # Outputting 2 angles: Pitch and Yaw
         )
 
-    def forward(self, xl, xr):
-        # Expects tensors of shape (B, 1, 36, 60)
-        feat_l = self.conv(xl)
-        feat_r = self.conv(xr)
+    def forward(self, xl, xr, pose):
+        # Expects tensors of shape (B, 1, 36, 60) for eyes, (B, 3) for pose
+        feat_l = self.conv(xl).view(xl.size(0), -1)
+        feat_r = self.conv(xr).view(xr.size(0), -1)
         
-        feat_l = feat_l.view(feat_l.size(0), -1)
-        feat_r = feat_r.view(feat_r.size(0), -1)
-        
-        # Concatenate features from both eyes
-        combined = torch.cat((feat_l, feat_r), dim=1)
+        # Concatenate features from both eyes and head pose
+        combined = torch.cat((feat_l, feat_r, pose), dim=1)
         return self.fc(combined)
 
 def load_model(weights_path):
@@ -47,30 +45,33 @@ def load_model(weights_path):
     model.eval()
     return model
 
-def predict_gaze(model, xl_tensor, xr_tensor):
+def predict_gaze(model, xl_tensor, xr_tensor, pose_tensor):
+    """
+    Predicts gaze direction and returns a vector for visualization.
+    pose_tensor is expected to be (1, 3) tensor [pitch, yaw, roll]
+    """
     with torch.no_grad():
-        output = model(xl_tensor, xr_tensor)
-        gaze_vector = output[0].numpy()
-        x_angle = float(gaze_vector[0])
-        y_angle = float(gaze_vector[1])
+        output = model(xl_tensor, xr_tensor, pose_tensor)
+        gaze_angles = output[0].numpy() # [Pitch, Yaw]
+        pitch = float(gaze_angles[0])
+        yaw = float(gaze_angles[1])
 
         # Many webcam streams are mirrored; default inversion keeps left/right intuitive.
         if INVERT_HORIZONTAL:
-            x_angle = -x_angle
+            yaw = -yaw
 
         # Prefer center when both axes are near zero to avoid one-sided drift.
-        if abs(x_angle) < X_DEADZONE and abs(y_angle) < Y_DEADZONE:
+        # Thresholds might need calibration based on the new model's output range.
+        if abs(yaw) < X_DEADZONE and abs(pitch) < Y_DEADZONE:
             direction = "center"
         elif abs(x_angle) >= abs(y_angle):
             direction = "right" if x_angle > 0 else "left"
         elif y_angle < -Y_DEADZONE:
-            direction = "down"
-        elif y_angle > Y_DEADZONE:
             direction = "up"
+        elif y_angle > Y_DEADZONE:
+            direction = "down"
         else:
             direction = "center"
 
-        # Keep debug vector aligned with interpreted direction.
-        gaze_vector[0] = x_angle
-            
-        return direction, gaze_vector
+        # Return direction and a mock gaze vector for UI compatibility
+        return direction, [yaw, pitch, 0.0]
