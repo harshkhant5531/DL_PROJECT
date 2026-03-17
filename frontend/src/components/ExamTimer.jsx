@@ -23,9 +23,9 @@ const ExamTimer = ({ isActive }) => {
   };
 
   return (
-    <div className="flex items-center gap-2 px-4 py-1.5 rounded-full font-mono text-gray-700 font-semibold border border-gray-200 shadow-sm bg-gray-50/50">
-      <Timer size={18} className="text-blue-500" />
-      <span className="text-lg tabular-nums tracking-widest">{formatTime(seconds)}</span>
+    <div className="flex items-center gap-2 px-4 py-1.5 rounded-xl font-mono text-slate-700 font-bold border border-slate-200 shadow-sm bg-white">
+      <Timer size={16} className="text-blue-600" />
+      <span className="text-lg tabular-nums tracking-wider">{formatTime(seconds)}</span>
     </div>
   );
 };

@@ -4,8 +4,8 @@ import os
 
 
 INVERT_HORIZONTAL = os.getenv("INVERT_GAZE_HORIZONTAL", "1").strip().lower() in {"1", "true", "yes"}
-X_DEADZONE = float(os.getenv("GAZE_X_DEADZONE", "0.28"))
-Y_DEADZONE = float(os.getenv("GAZE_Y_DEADZONE", "0.22"))
+X_DEADZONE = float(os.getenv("GAZE_X_DEADZONE", "0.22"))
+Y_DEADZONE = float(os.getenv("GAZE_Y_DEADZONE", "0.16"))
 
 class GazeNet(nn.Module):
     def __init__(self):
@@ -85,10 +85,9 @@ def predict_gaze(model, xl_tensor, xr_tensor, pose_tensor):
             direction = "center"
         elif abs(yaw) >= abs(pitch):
             direction = "right" if yaw > 0 else "left"
-        elif pitch < -Y_DZ: 
-            # Negative pitch is now "Down" for this specific setup
+        elif pitch < -Y_DEADZONE:
             direction = "down"
-        elif pitch > Y_DZ:
+        elif pitch > Y_DEADZONE:
             direction = "up"
         else:
             direction = "center"

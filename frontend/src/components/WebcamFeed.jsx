@@ -1,4 +1,4 @@
-import React, { useRef, useCallback, useEffect, useState } from 'react';
+import React, { useRef, useCallback, useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import Webcam from "react-webcam";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Scan, Shield, Activity, Eye, AlertCircle } from 'lucide-react';
@@ -8,12 +8,11 @@ const API_ENDPOINT = configuredBackendBase
   ? `${configuredBackendBase.replace(/\/$/, "")}/api/process_frame`
   : "/api/process_frame";
 
-const WebcamFeed = ({ onGazeDataUpdate }) => {
+const WebcamFeed = forwardRef(({ onGazeDataUpdate }, ref) => {
   const webcamRef = useRef(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const warningCountRef = useRef(0);
   const consecutiveAwayRef = useRef(0);
-  const [lastDirection, setLastDirection] = useState("initializing");
 
   const capture = useCallback(async () => {
     if (webcamRef.current && !isProcessing) {
@@ -74,33 +73,56 @@ const WebcamFeed = ({ onGazeDataUpdate }) => {
         className="w-full block opacity-90"
         mirrored={true}
       />
-
-      {/* Clean HUD Overlay */}
-      <div className="absolute inset-0 pointer-events-none z-10">
-        {/* Minimal Scan Line */}
-        <motion.div 
-          animate={{ top: ["0%", "100%"] }}
-          transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-          className="absolute left-0 right-0 h-[1px] bg-cyan-500/20 z-20"
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+        <div
+          className="absolute w-16 h-16 md:w-20 md:h-20 border-2 border-cyan-300/95 rounded-md shadow-[0_0_0_9999px_rgba(0,0,0,0.18)] transition-all duration-150"
+          style={{
+            left: `${eyeTarget.x * 100}%`,
+            top: `${eyeTarget.y * 100}%`,
+            transform: "translate(-50%, -50%)",
+          }}
         />
-
-        {/* Status Indicators */}
-        <div className="absolute top-6 left-6 flex flex-col gap-2">
-          <div className="flex items-center gap-2 bg-black/60 backdrop-blur-xl px-3 py-1.5 rounded-full border border-white/10">
-            <Activity size={12} className={isProcessing ? "text-cyan-400 animate-pulse" : "text-white/20"} />
-            <span className="text-[9px] font-bold uppercase tracking-widest text-white/80">Proctor_Active</span>
+        {eyeBoxes.left && (
+          <div
+            className="absolute border-2 border-green-400/80 transition-all duration-150 overflow-hidden"
+            style={{
+              left: `${eyeBoxes.left[0] * 100}%`,
+              top: `${eyeBoxes.left[1] * 100}%`,
+              width: `${eyeBoxes.left[2] * 100}%`,
+              height: `${eyeBoxes.left[3] * 100}%`,
+              borderRadius: '2px',
+              boxShadow: '0 0 10px rgba(74, 222, 128, 0.2)',
+            }}
+          >
+            <div className="absolute -top-5 left-0 text-[10px] font-bold text-green-400 bg-black/40 px-1 rounded">EYE L</div>
+            {/* Scanning Line */}
+            <div className="absolute w-full h-0.5 bg-green-400/50 shadow-[0_0_5px_#4ade80] top-0 animate-scan" />
+            {/* Corner pieces */}
+            <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-green-400" />
+            <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-green-400" />
+            <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-green-400" />
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-green-400" />
           </div>
-          
-          <div className="flex items-center gap-3 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 shadow-xl">
-             <div className={`p-1.5 rounded-lg ${lastDirection === 'center' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                {lastDirection === 'center' ? <Eye size={16} /> : <AlertCircle size={16} />}
-             </div>
-             <div className="flex flex-col">
-                <span className="text-[7px] font-black text-white/30 uppercase tracking-[0.2em]">Target_Focus</span>
-                <span className={`text-xs font-black uppercase tracking-widest ${lastDirection === 'center' ? 'text-emerald-400' : 'text-red-400'}`}>
-                  {lastDirection}
-                </span>
-             </div>
+        )}
+        {eyeBoxes.right && (
+          <div
+            className="absolute border-2 border-green-400/80 transition-all duration-150 overflow-hidden"
+            style={{
+              left: `${eyeBoxes.right[0] * 100}%`,
+              top: `${eyeBoxes.right[1] * 100}%`,
+              width: `${eyeBoxes.right[2] * 100}%`,
+              height: `${eyeBoxes.right[3] * 100}%`,
+              borderRadius: '2px',
+              boxShadow: '0 0 10px rgba(74, 222, 128, 0.2)',
+            }}
+          >
+            <div className="absolute -top-5 left-0 text-[10px] font-bold text-green-400 bg-black/40 px-1 rounded">EYE R</div>
+            {/* Scanning Line */}
+            <div className="absolute w-full h-0.5 bg-green-400/50 shadow-[0_0_5px_#4ade80] top-0 animate-scan" />
+            <div className="absolute top-0 left-0 w-2 h-2 border-t-2 border-l-2 border-green-400" />
+            <div className="absolute top-0 right-0 w-2 h-2 border-t-2 border-r-2 border-green-400" />
+            <div className="absolute bottom-0 left-0 w-2 h-2 border-b-2 border-l-2 border-green-400" />
+            <div className="absolute bottom-0 right-0 w-2 h-2 border-b-2 border-r-2 border-green-400" />
           </div>
         </div>
 
@@ -122,6 +144,6 @@ const WebcamFeed = ({ onGazeDataUpdate }) => {
       </div>
     </div>
   );
-};
+});
 
 export default WebcamFeed;

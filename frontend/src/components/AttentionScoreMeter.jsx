@@ -64,7 +64,7 @@ const AttentionScoreMeter = ({ score }) => {
         </svg>
 
         {/* Center Content */}
-        <div className="absolute flex flex-col items-center justify-center bg-white/40 backdrop-blur-md rounded-full w-[78%] h-[78%] border border-white/60 shadow-inner">
+        <div className="absolute flex flex-col items-center justify-center bg-white rounded-full w-[78%] h-[78%] border border-slate-100 shadow-sm">
           <div className={`flex items-center gap-1 mb-1 ${colorClass.split(' ')[0]}`}>
             <Icon size={16} />
             <span className="text-[10px] font-black uppercase tracking-tighter">{statusLabel}</span>

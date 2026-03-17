@@ -4,21 +4,21 @@ import { AlertCircle, AlertTriangle, ShieldCheck, Zap } from 'lucide-react';
 
 const severityStyle = {
   low: {
-    wrapper: "bg-slate-900/40 border-slate-700 text-slate-300",
+    wrapper: "bg-blue-50/50 border-blue-100 text-blue-900",
     icon: ShieldCheck,
-    iconClass: "text-blue-500",
+    iconClass: "text-blue-600",
     glow: "shadow-blue-500/5",
   },
   medium: {
-    wrapper: "bg-amber-500/10 border-amber-500/30 text-amber-200",
+    wrapper: "bg-amber-50 border-amber-200 text-amber-900",
     icon: AlertTriangle,
-    iconClass: "text-amber-500",
+    iconClass: "text-amber-600",
     glow: "shadow-amber-500/10",
   },
   high: {
-    wrapper: "bg-rose-500/10 border-rose-500/30 text-rose-200",
+    wrapper: "bg-rose-50 border-rose-200 text-rose-900",
     icon: AlertCircle,
-    iconClass: "text-rose-500 animate-pulse",
+    iconClass: "text-rose-600 animate-pulse",
     glow: "shadow-rose-500/20",
   },
 };
@@ -55,13 +55,13 @@ const WarningAlert = ({ warning, message, severity = "high" }) => {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 1.05 }}
-            className="flex items-center gap-4 p-5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-100 backdrop-blur-md shadow-2xl shadow-emerald-500/5"
+            className="flex items-center gap-4 p-5 bg-emerald-50 border border-emerald-100 text-emerald-900 backdrop-blur-md shadow-lg shadow-emerald-500/5"
           >
-            <div className="p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400">
+            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600">
               <ShieldCheck size={24} />
             </div>
             <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50 mb-1">Status Protocol</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-1 text-emerald-700">Status Protocol</span>
               <span className="font-bold text-sm tracking-tight">System Secure — Eyes on Target</span>
             </div>
           </motion.div>

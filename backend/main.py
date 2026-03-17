@@ -53,13 +53,29 @@ POLICY = RISK_PROFILES[ACTIVE_POLICY]
 
 app = FastAPI()
 
+# --- CORS CONFIGURATION ---
+raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
+if raw_origins == "*":
+    ALLOWED_ORIGINS = ["*"]
+    # Credentials MUST be False if origins is "*" to avoid 400 errors
+    ALLOW_CREDENTIALS = False 
+else:
+    # Clean up origins: split by comma and remove spaces/trailing slashes
+    ALLOWED_ORIGINS = [o.strip().rstrip('/') for o in raw_origins.split(",") if o.strip()]
+    ALLOW_CREDENTIALS = True
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=ALLOW_CREDENTIALS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+async def root():
+    """Health check endpoint for Render."""
+    return {"status": "online", "message": "Exam Monitoring API is active"}
 
 try:
     model_path = os.path.join(os.path.dirname(__file__), "gaze_model.pth")
@@ -193,19 +209,17 @@ async def api_process_frame(request: FrameRequest):
     
     # Weighted scoring smooths transient noise while still penalizing sustained look-away.
     if direction == "center":
-        # Recover faster (reward good behavior)
-        risk_score = clamp_risk(risk_score - (POLICY["recover_center"] * 2))
+        # Do not recover score (integrity point stays same)
+        pass
     elif head_pose == "sideways_extreme" and direction in {"left", "right"}:
-        # Do not penalize strong side turns; often caused by real-world brief announcements.
-        risk_score = clamp_risk(risk_score - 2)
+        # Do not recover score (neutral)
+        pass
     elif direction == "down":
-        # GRACE BUFFER: Only penalize if away for more than 2 frames
-        if consecutive_away > 2:
-            risk_score = clamp_risk(risk_score + POLICY["penalty_down"])
+        # Penalize immediately for downward gaze
+        risk_score = clamp_risk(risk_score + POLICY["penalty_down"])
     else:
-        # GRACE BUFFER: Side/Up gaze (more suspicious) - penalize after 1 frame
-        if consecutive_away > 1:
-            risk_score = clamp_risk(risk_score + POLICY["penalty_side_or_up"])
+        # Penalize immediately for side/up gaze
+        risk_score = clamp_risk(risk_score + POLICY["penalty_side_or_up"])
 
     cheating_risk = risk_to_level(risk_score)
     warning = cheating_risk in {"medium", "high"}
@@ -217,10 +231,13 @@ async def api_process_frame(request: FrameRequest):
 
     if head_pose == "sideways_extreme" and direction in {"left", "right"}:
         warning_message = "Head turned strongly sideways (announcement-safe mode)."
+    elif head_pose == "tilted_extreme":
+        warning_message = "Head tilted excessively up or down."
 
     attention_score = risk_to_attention(risk_score)
+    nose_ratio_v = (meta or {}).get("nose_ratio_v", 0.5)
     print(
-        f"DEBUG: Policy={ACTIVE_POLICY} | HeadPose={head_pose} (ratio={nose_ratio:.2f}) "
+        f"DEBUG: Policy={ACTIVE_POLICY} | HeadPose={head_pose} (H:{nose_ratio:.2f}, V:{nose_ratio_v:.2f}) "
         f"| Risk Score: {risk_score} | Calculated Score: {attention_score}"
     )
         
@@ -243,4 +260,7 @@ async def api_process_frame(request: FrameRequest):
     )
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Get port from environment variable (Render sets this automatically)
+    port = int(os.getenv("PORT", 8000))
+    # 'reload' should be False in production for better performance
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

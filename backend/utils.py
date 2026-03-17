@@ -27,14 +27,13 @@ RIGHT_CHEEK_IDX = 454
 RIGHT_IRIS_INDICES = [468, 469, 470, 471, 472]
 LEFT_IRIS_INDICES = [473, 474, 475, 476, 477]
 
-# Landmarks for Pitch/Yaw/Roll estimation proxies
-# (Lightweight geometric approach using ratios)
-UPPER_LIP = 13
-LOWER_LIP = 14
-CHIN = 152
+# Extra indices for head pose and 3D vector calculation
+TOP_FOREHEAD_IDX = 10
+BOTTOM_CHIN_IDX = 152
 FOREHEAD = 10
-LEFT_EYE_INNER = 133
-RIGHT_EYE_INNER = 362
+CHIN = 152
+LEFT_EYE_INNER = 263
+RIGHT_EYE_INNER = 133
 
 # Eye reference points for geometric gaze estimation.
 RIGHT_EYE_LEFT_CORNER = 33
@@ -74,21 +73,42 @@ def crop_eye(image, landmarks, eye_indices):
 
 
 def estimate_head_pose(landmarks):
+    # --- Horizontal (Yaw) ---
     left_x = landmarks[LEFT_CHEEK_IDX].x
     right_x = landmarks[RIGHT_CHEEK_IDX].x
     nose_x = landmarks[NOSE_TIP_IDX].x
 
     face_width = right_x - left_x
     if abs(face_width) < 1e-6:
-        return "unknown", 0.5
+        nose_ratio_h = 0.5
+    else:
+        nose_ratio_h = (nose_x - left_x) / face_width
 
-    nose_ratio = (nose_x - left_x) / face_width
+    # --- Vertical (Pitch) ---
+    top_y = landmarks[TOP_FOREHEAD_IDX].y
+    bottom_y = landmarks[BOTTOM_CHIN_IDX].y
+    nose_y = landmarks[NOSE_TIP_IDX].y
 
-    if nose_ratio < 0.2 or nose_ratio > 0.8:
-        return "sideways_extreme", nose_ratio
-    if nose_ratio < 0.35 or nose_ratio > 0.65:
-        return "sideways_partial", nose_ratio
-    return "frontal", nose_ratio
+    face_height = bottom_y - top_y
+    if abs(face_height) < 1e-6:
+        nose_ratio_v = 0.5
+    else:
+        # Typical neutral v_ratio is ~0.45-0.5. 
+        # Tilted down -> nose moves down -> ratio increases.
+        # Tilted up -> nose moves up -> ratio decreases.
+        nose_ratio_v = (nose_y - top_y) / face_height
+
+    # String classification for main.py (primarily used for sideways extreme mode)
+    if nose_ratio_h < 0.2 or nose_ratio_h > 0.8:
+        head_pose_str = "sideways_extreme"
+    elif nose_ratio_h < 0.35 or nose_ratio_h > 0.65:
+        head_pose_str = "sideways_partial"
+    elif nose_ratio_v < 0.3 or nose_ratio_v > 0.7:
+        head_pose_str = "tilted_extreme"
+    else:
+        head_pose_str = "frontal"
+
+    return head_pose_str, (nose_ratio_h, nose_ratio_v)
 
 def get_3d_pose_vector(landmarks):
     """
@@ -131,14 +151,16 @@ def _mean_landmark(landmarks, indices):
     return x, y
 
 
-def estimate_gaze_from_landmarks(landmarks, nose_ratio):
-    # If iris landmarks are unavailable, use head yaw as a fallback signal.
+def estimate_gaze_from_landmarks(landmarks, nose_ratios):
+    nose_ratio_h, nose_ratio_v = nose_ratios
+    
+    # If iris landmarks are unavailable, use head yaw/pitch as fallback signals.
     if len(landmarks) < 478:
         if nose_ratio < 0.42:
-            return "left", 0.45, (0.35, 0.5), [-0.15, 0.0]
+            return "left", 0.45, (0.35, 0.5)
         if nose_ratio > 0.58:
-            return "right", 0.45, (0.65, 0.5), [0.15, 0.0]
-        return "center", 0.4, (0.5, 0.5), [0.0, 0.0]
+            return "right", 0.45, (0.65, 0.5)
+        return "center", 0.4, (0.5, 0.5)
 
     r_iris_x, r_iris_y = _mean_landmark(landmarks, RIGHT_IRIS_INDICES)
     l_iris_x, l_iris_y = _mean_landmark(landmarks, LEFT_IRIS_INDICES)
@@ -176,18 +198,19 @@ def estimate_gaze_from_landmarks(landmarks, nose_ratio):
     h_offset = h_ratio - 0.5
     v_offset = v_ratio - 0.5
 
-    # Merge eye-driven cue with mild head yaw cue for stability.
-    yaw_offset = nose_ratio - 0.5
+    # Merge eye-driven cue with head pose cue for stability.
+    yaw_offset = nose_ratio_h - 0.5
+    pitch_offset = nose_ratio_v - 0.45  # Neutral pitch is slightly offset
+    
     combined_h = (0.75 * h_offset) + (0.25 * yaw_offset)
+    combined_v = (0.75 * v_offset) + (0.25 * pitch_offset)
 
-    if abs(combined_h) < 0.05 and abs(v_offset) < 0.05:
-        return "center", 0.9, (iris_center_x, iris_center_y), [float(combined_h), float(v_offset)]
+    if abs(combined_h) < 0.06 and abs(v_offset) < 0.08:
+        return "center", 0.75, (iris_center_x, iris_center_y)
 
     if abs(combined_h) >= abs(v_offset):
-        return ("right" if combined_h > 0 else "left"), 0.85, (iris_center_x, iris_center_y), [float(combined_h), float(v_offset)]
-    # Inverting Up/Down: positive v_offset (iris at bottom) is now Up, negative is Down.
-    # This matches the user's specific eye-landmark behavior.
-    return ("up" if v_offset > 0 else "down"), 0.85, (iris_center_x, iris_center_y), [float(combined_h), float(v_offset)]
+        return ("right" if combined_h > 0 else "left"), 0.8, (iris_center_x, iris_center_y)
+    return ("down" if v_offset > 0 else "up"), 0.7, (iris_center_x, iris_center_y)
 
 def process_frame(b64_image):
     try:
@@ -213,7 +236,7 @@ def process_frame(b64_image):
         landmarks = results.face_landmarks[0]
         head_pose, nose_ratio = estimate_head_pose(landmarks)
         pose_vector = get_3d_pose_vector(landmarks)
-        heuristic_direction, heuristic_confidence, iris_center, meta_heuristic_vec = estimate_gaze_from_landmarks(landmarks, nose_ratio)
+        heuristic_direction, heuristic_confidence, iris_center = estimate_gaze_from_landmarks(landmarks, nose_ratio)
         
         left_eye_img, left_box = crop_eye(rgb_img, landmarks, LEFT_EYE_INDICES)
         right_eye_img, right_box = crop_eye(rgb_img, landmarks, RIGHT_EYE_INDICES)
@@ -221,7 +244,8 @@ def process_frame(b64_image):
         if left_eye_img is None or right_eye_img is None:
             return None, None, "Eye region not visible", {
                 "head_pose": head_pose,
-                "nose_ratio": float(nose_ratio),
+                "nose_ratio": float(nose_ratio[0]),
+                "nose_ratio_v": float(nose_ratio[1]),
             }
         
         # convert to grayscale, resize, scale
@@ -244,19 +268,17 @@ def process_frame(b64_image):
 
         meta = {
             "head_pose": head_pose,
-            "nose_ratio": float(nose_ratio),
-            "pose_vector": pose_vector,
+            "nose_ratio": float(nose_ratio[0]),
+            "nose_ratio_v": float(nose_ratio[1]),
             "heuristic_direction": heuristic_direction,
             "heuristic_confidence": float(heuristic_confidence),
             "heuristic_vector": (meta_heuristic_vec if 'meta_heuristic_vec' in locals() else [0.0, 0.0]),
             "iris_center_x": float(iris_center[0]),
             "iris_center_y": float(iris_center[1]),
-            "left_eye_center": [float(l_center_x), float(l_center_y)],
-            "right_eye_center": [float(r_center_x), float(r_center_y)],
             "left_eye_box": left_box,
             "right_eye_box": right_box,
-            "left_iris": [float(l_iris_x), float(l_iris_y)],
-            "right_iris": [float(r_iris_x), float(r_iris_y)],
+            "left_iris": [float(l_iris_x), float(1.0 - l_iris_y)],
+            "right_iris": [float(r_iris_x), float(1.0 - r_iris_y)],
         }
         
         return left_tensor, right_tensor, None, meta
