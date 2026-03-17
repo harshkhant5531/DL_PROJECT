@@ -27,6 +27,15 @@ RIGHT_CHEEK_IDX = 454
 RIGHT_IRIS_INDICES = [468, 469, 470, 471, 472]
 LEFT_IRIS_INDICES = [473, 474, 475, 476, 477]
 
+# Landmarks for Pitch/Yaw/Roll estimation proxies
+# (Lightweight geometric approach using ratios)
+UPPER_LIP = 13
+LOWER_LIP = 14
+CHIN = 152
+FOREHEAD = 10
+LEFT_EYE_INNER = 133
+RIGHT_EYE_INNER = 362
+
 # Eye reference points for geometric gaze estimation.
 RIGHT_EYE_LEFT_CORNER = 33
 RIGHT_EYE_RIGHT_CORNER = 133
@@ -80,6 +89,35 @@ def estimate_head_pose(landmarks):
     if nose_ratio < 0.35 or nose_ratio > 0.65:
         return "sideways_partial", nose_ratio
     return "frontal", nose_ratio
+
+def get_3d_pose_vector(landmarks):
+    """
+    Returns a proxy for [pitch, yaw, roll] based on landmark geometric ratios.
+    Adjusted to match common gaze model expectations.
+    """
+    left_x = landmarks[LEFT_CHEEK_IDX].x
+    right_x = landmarks[RIGHT_CHEEK_IDX].x
+    nose_x = landmarks[NOSE_TIP_IDX].x
+    nose_y = landmarks[NOSE_TIP_IDX].y
+    forehead_y = landmarks[FOREHEAD].y
+    chin_y = landmarks[CHIN].y
+    
+    # Yaw: Horizontal nose displacement
+    face_width = max(1e-6, right_x - left_x)
+    yaw = (nose_x - left_x) / face_width - 0.5
+    
+    # Pitch: Vertical nose displacement
+    face_height = max(1e-6, chin_y - forehead_y)
+    pitch = (nose_y - forehead_y) / face_height - 0.5
+    
+    # Roll: Eye tilt
+    lex = landmarks[LEFT_EYE_INNER].x
+    ley = landmarks[LEFT_EYE_INNER].y
+    rex = landmarks[RIGHT_EYE_INNER].x
+    rey = landmarks[RIGHT_EYE_INNER].y
+    roll = (rey - ley) / max(1e-6, rex - lex)
+
+    return [float(pitch), float(yaw), float(roll)]
 
 
 def _landmark_xy(landmarks, idx):
@@ -172,6 +210,7 @@ def process_frame(b64_image):
             
         landmarks = results.face_landmarks[0]
         head_pose, nose_ratio = estimate_head_pose(landmarks)
+        pose_vector = get_3d_pose_vector(landmarks)
         heuristic_direction, heuristic_confidence, iris_center = estimate_gaze_from_landmarks(landmarks, nose_ratio)
         
         left_eye_img, left_box = crop_eye(rgb_img, landmarks, LEFT_EYE_INDICES)
@@ -201,6 +240,7 @@ def process_frame(b64_image):
         meta = {
             "head_pose": head_pose,
             "nose_ratio": float(nose_ratio),
+            "pose_vector": pose_vector,
             "heuristic_direction": heuristic_direction,
             "heuristic_confidence": float(heuristic_confidence),
             "iris_center_x": float(iris_center[0]),

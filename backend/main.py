@@ -160,12 +160,16 @@ async def api_process_frame(request: FrameRequest):
     eye_target_x = max(0.0, min(1.0, eye_target_x))
     eye_target_y = max(0.0, min(1.0, eye_target_y))
 
+    pose_vector = (meta or {}).get("pose_vector", [0.0, 0.0, 0.0])
+    
     if heuristic_direction and heuristic_confidence >= 0.55:
         direction = heuristic_direction
         gaze_vec = [0.0, 0.0, 0.0]
         model_source = "heuristic"
     else:
-        direction, gaze_vec = predict_gaze(gaze_model, left, right)
+        # Convert pose_vector to tensor (1, 3)
+        pose_tensor = torch.tensor(pose_vector, dtype=torch.float32).unsqueeze(0)
+        direction, gaze_vec = predict_gaze(gaze_model, left, right, pose_tensor)
         model_source = "model"
     
     print(
