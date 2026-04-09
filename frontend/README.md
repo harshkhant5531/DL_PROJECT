@@ -1,34 +1,30 @@
-# React + Vite
+# MPIIGaze Frontend Showcase
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Modern React + Vite UI for presenting the MPIIGaze model with:
 
-Currently, two official plugins are available:
+- **Overview page** for value proposition and pipeline storytelling
+- **Live demo page** for webcam-based real-time inference
+- **Benchmarks page** for model performance framing
+- **Model story page** for architecture and deployment narrative
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Run locally
 
-## React Compiler
-
-# Frontend Setup
-
-## Run Locally
-
-1. Start backend first on port 8000.
-2. Run frontend:
+1. Start backend on port `8000`.
+2. Start frontend:
 
 ```bash
 npm install
 npm run dev
 ```
 
-The app calls `/api/process_frame` and Vite proxies that to `http://127.0.0.1:8000` in development.
+The frontend calls `/api/process_frame`; Vite proxies this to `http://127.0.0.1:8000` in development.
 
-## Custom Backend URL
+## Custom backend URL
 
-If backend is running on another host/port, create a `.env` file in `frontend`:
+To call a deployed backend directly, create `frontend/.env`:
 
 ```env
 VITE_BACKEND_URL=http://127.0.0.1:8000
 ```
 
-When `VITE_BACKEND_URL` is set, frontend calls that URL directly.
+When `VITE_BACKEND_URL` is set, the app uses that base URL instead of the dev proxy.

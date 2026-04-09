@@ -1,46 +1,87 @@
+import os
+
 import torch
 import torch.nn as nn
-import os
 
 
 INVERT_HORIZONTAL = os.getenv("INVERT_GAZE_HORIZONTAL", "1").strip().lower() in {"1", "true", "yes"}
 X_DEADZONE = float(os.getenv("GAZE_X_DEADZONE", "0.22"))
-Y_DEADZONE = float(os.getenv("GAZE_Y_DEADZONE", "0.16"))
+
 
 class GazeNet(nn.Module):
+    """
+    Primary production architecture.
+
+    Matches checkpoints that store parameters under `feature_extractor.*`
+    and use a flattened FC input size of 3203.
+    """
+
     def __init__(self):
-        super(GazeNet, self).__init__()
-        
-        # Siamese convolutional backbone
+        super().__init__()
+        self.feature_extractor = nn.Sequential(
+            nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
+            nn.AdaptiveAvgPool2d((5, 5)),
+        )
+        self.fc = nn.Sequential(
+            nn.Linear(1600 * 2 + 3, 128),
+            nn.ReLU(inplace=True),
+            nn.Linear(128, 2),
+        )
+
+    def forward(self, xl, xr, pose):
+        feat_l = self.feature_extractor(xl).view(xl.size(0), -1)
+        feat_r = self.feature_extractor(xr).view(xr.size(0), -1)
+        combined = torch.cat((feat_l, feat_r, pose), dim=1)
+        return self.fc(combined)
+
+
+class LegacyGazeNet(nn.Module):
+    """
+    Backward-compatible architecture for checkpoints with `conv.*` weights.
+    """
+
+    def __init__(self):
+        super().__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(1, 32, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2),
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.MaxPool2d(2)
+            nn.MaxPool2d(2),
         )
-        
-        # Fully connected layers
-        # Image features (64 * 9 * 15 * 2 = 17280) + Head Pose (3) = 17283
         self.fc = nn.Sequential(
             nn.Linear(64 * 9 * 15 * 2 + 3, 128),
             nn.ReLU(),
-            nn.Linear(128, 2) # Outputting 2 angles: Pitch and Yaw
+            nn.Linear(128, 2),
         )
 
     def forward(self, xl, xr, pose):
-        # Expects tensors of shape (B, 1, 36, 60) for eyes, (B, 3) for pose
         feat_l = self.conv(xl).view(xl.size(0), -1)
         feat_r = self.conv(xr).view(xr.size(0), -1)
-        
-        # Concatenate features from both eyes and head pose
         combined = torch.cat((feat_l, feat_r, pose), dim=1)
         return self.fc(combined)
 
+
+def _build_model_from_checkpoint(state_dict):
+    keys = state_dict.keys()
+    if any(key.startswith("feature_extractor.") for key in keys):
+        return GazeNet()
+    if any(key.startswith("conv.") for key in keys):
+        return LegacyGazeNet()
+    raise RuntimeError(
+        "Unsupported checkpoint format: expected `feature_extractor.*` or `conv.*` keys."
+    )
+
+
 def load_model(weights_path):
-    model = GazeNet()
     state_dict = torch.load(weights_path, map_location="cpu")
+    model = _build_model_from_checkpoint(state_dict)
     model.load_state_dict(state_dict)
     model.eval()
     return model
@@ -77,19 +118,10 @@ def predict_gaze(model, xl_tensor, xr_tensor, pose_tensor):
 
         print(f"DEBUG: Calibrated Gaze -> Pitch: {pitch:.4f}, Yaw: {yaw:.4f}")
 
-        # Thresholds (Tighter for this user's limited range)
-        X_DZ = 0.15
-        Y_DZ = 0.015
-
-        if abs(yaw) < X_DZ and abs(pitch) < Y_DZ:
+        # Horizontal-only direction mode: vertical up/down classes are disabled.
+        if abs(yaw) < X_DEADZONE:
             direction = "center"
-        elif abs(yaw) >= abs(pitch):
-            direction = "right" if yaw > 0 else "left"
-        elif pitch < -Y_DEADZONE:
-            direction = "down"
-        elif pitch > Y_DEADZONE:
-            direction = "up"
         else:
-            direction = "center"
+            direction = "right" if yaw > 0 else "left"
 
         return direction, [yaw, pitch, 0.0]

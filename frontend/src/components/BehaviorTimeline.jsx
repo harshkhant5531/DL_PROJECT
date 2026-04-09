@@ -1,59 +1,119 @@
-import React from 'react';
-import { History, AlertTriangle, Fingerprint, Zap } from 'lucide-react';
+import { Clock3, History } from "lucide-react";
 
-const BehaviorTimeline = ({ events }) => {
+function getEventMeta(message = "") {
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes("started") || normalized.includes("paused")) {
+    return {
+      label: "Session",
+      badgeClass: "border-sky-500/40 bg-sky-500/15 text-sky-100",
+    };
+  }
+
+  if (normalized.includes("direction changed")) {
+    return {
+      label: "Direction",
+      badgeClass: "border-indigo-500/40 bg-indigo-500/15 text-indigo-100",
+    };
+  }
+
+  if (
+    normalized.includes("warning") ||
+    normalized.includes("risk") ||
+    normalized.includes("critical")
+  ) {
+    return {
+      label: "Alert",
+      badgeClass: "border-amber-500/40 bg-amber-500/15 text-amber-100",
+    };
+  }
+
+  return {
+    label: "System",
+    badgeClass: "border-slate-500/40 bg-slate-500/15 text-slate-100",
+  };
+}
+
+function BehaviorTimeline({ events = [] }) {
+  const orderedEvents = events.slice().reverse();
+
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between mb-6 pb-2 border-b border-slate-100">
+    <article className="premium-card flex h-[320px] flex-col p-4">
+      <div className="mb-3 flex items-center justify-between border-b border-slate-700/70 pb-3">
         <div className="flex items-center gap-2">
-          <History size={18} className="text-amber-600" />
-          <h2 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500">Neural Log</h2>
+          <div className="rounded-lg border border-slate-600/70 bg-slate-800/70 p-2 text-slate-200">
+            <History size={14} />
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+              Timeline
+            </p>
+            <h3 className="text-sm font-semibold text-slate-100">Live Session Events</h3>
+          </div>
         </div>
-        <div className="flex gap-1">
-          <div className="w-1 h-1 rounded-full bg-blue-500/20" />
-          <div className="w-1 h-1 rounded-full bg-blue-500/10" />
-          <div className="w-1 h-1 rounded-full bg-blue-500/5" />
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center rounded-full border border-slate-500/40 bg-slate-700/35 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-200">
+            {events.length} Events
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-100">
+            <Clock3 size={11} />
+            Live
+          </span>
         </div>
       </div>
-      
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar scroll-smooth">
-        {events.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-40 opacity-40 grayscale">
-            <Fingerprint size={48} className="mb-4 text-slate-300" />
-            <p className="text-[10px] font-bold uppercase tracking-widest text-center text-slate-400">No Trace Detected</p>
+
+      <div className="custom-scrollbar flex-1 space-y-2.5 overflow-y-auto pr-1">
+        {orderedEvents.length === 0 ? (
+          <div className="flex h-full flex-col items-center justify-center text-center text-slate-500">
+            <Clock3 size={24} />
+            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em]">
+              Waiting for events
+            </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Session activity will appear here in real time.
+            </p>
           </div>
         ) : (
-          events.slice().reverse().map((event, index) => (
-            <div 
-              key={index} 
-              className="group relative flex gap-4 p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 transition-all hover:border-amber-500/30 shadow-sm"
-            >
-              <div className="relative">
-                <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 shrink-0 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                  <AlertTriangle size={14} />
-                </div>
-                {index !== 0 && (
-                  <div className="absolute top-10 bottom-0 left-1/2 w-px bg-slate-100 -translate-x-1/2 h-full z-0" />
-                )}
-              </div>
+          orderedEvents.map((event) => {
+            const eventDate = new Date(event.time);
+            const hasValidDate = !Number.isNaN(eventDate.getTime());
+            const timestamp = hasValidDate
+              ? eventDate.toLocaleTimeString([], {
+                  hour12: false,
+                  minute: "2-digit",
+                  second: "2-digit",
+                })
+              : "--:--:--";
+            const meta = getEventMeta(event.message);
 
-               <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-700 leading-snug truncate group-hover:text-amber-900 transition-colors">
-                    {event.message}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Zap size={10} className="text-amber-500/50" />
-                    <span className="text-[10px] font-black text-amber-600/70 uppercase tracking-tighter">
-                      {event.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                    </span>
-                  </div>
-               </div>
-            </div>
-          ))
+            return (
+              <div
+                key={event.id}
+                className="rounded-xl border border-slate-700/70 bg-slate-900/60 p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <time
+                    dateTime={hasValidDate ? eventDate.toISOString() : undefined}
+                    className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400"
+                  >
+                    {timestamp}
+                  </time>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${meta.badgeClass}`}
+                  >
+                    {meta.label}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-slate-200">
+                  {event.message}
+                </p>
+              </div>
+            );
+          })
         )}
       </div>
-    </div>
+    </article>
   );
-};
+}
 
 export default BehaviorTimeline;

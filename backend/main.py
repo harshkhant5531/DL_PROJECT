@@ -50,6 +50,7 @@ ACTIVE_POLICY = os.getenv("EXAM_POLICY", "balanced").strip().lower()
 if ACTIVE_POLICY not in RISK_PROFILES:
     ACTIVE_POLICY = "balanced"
 POLICY = RISK_PROFILES[ACTIVE_POLICY]
+ALLOWED_GAZE_DIRECTIONS = {"left", "right", "center"}
 
 app = FastAPI()
 
@@ -195,6 +196,10 @@ async def api_process_frame(request: FrameRequest):
     else:
         direction = model_dir
         model_source = "model"
+
+    direction = (direction or "center").strip().lower()
+    if direction not in ALLOWED_GAZE_DIRECTIONS:
+        direction = "center"
     
     gaze_vec = model_vec
     
@@ -214,11 +219,8 @@ async def api_process_frame(request: FrameRequest):
     elif head_pose == "sideways_extreme" and direction in {"left", "right"}:
         # Do not recover score (neutral)
         pass
-    elif direction == "down":
-        # Penalize immediately for downward gaze
-        risk_score = clamp_risk(risk_score + POLICY["penalty_down"])
     else:
-        # Penalize immediately for side/up gaze
+        # Penalize immediately for any off-center horizontal gaze.
         risk_score = clamp_risk(risk_score + POLICY["penalty_side_or_up"])
 
     cheating_risk = risk_to_level(risk_score)

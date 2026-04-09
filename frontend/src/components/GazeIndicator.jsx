@@ -1,73 +1,74 @@
-import React from 'react';
-import { Eye, Focus } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, ArrowRight, Eye, EyeOff } from "lucide-react";
 
-const GazeIndicator = ({ direction }) => {
-  const isCenter = direction === "center";
-  const isUnknown = direction === "unknown";
+const DIRECTION_CONFIG = {
+  left: {
+    icon: ArrowLeft,
+    title: "Looking Left",
+    subtitle: "Eyes shifted left from the center region.",
+    iconClass: "border-sky-500/35 bg-sky-500/15 text-sky-200",
+    badgeClass: "border-sky-500/40 bg-sky-500/15 text-sky-100",
+    badge: "Direction drift",
+  },
+  right: {
+    icon: ArrowRight,
+    title: "Looking Right",
+    subtitle: "Eyes shifted right from the center region.",
+    iconClass: "border-sky-500/35 bg-sky-500/15 text-sky-200",
+    badgeClass: "border-sky-500/40 bg-sky-500/15 text-sky-100",
+    badge: "Direction drift",
+  },
+  center: {
+    icon: Eye,
+    title: "Centered",
+    subtitle: "Attention is aligned with the active screen area.",
+    iconClass: "border-emerald-500/35 bg-emerald-500/15 text-emerald-200",
+    badgeClass: "border-emerald-500/40 bg-emerald-500/15 text-emerald-100",
+    badge: "On-screen focus",
+  },
+  unknown: {
+    icon: EyeOff,
+    title: "Unavailable",
+    subtitle: "No reliable gaze signal from the current frame.",
+    iconClass: "border-slate-500/35 bg-slate-700/40 text-slate-200",
+    badgeClass: "border-slate-500/40 bg-slate-600/30 text-slate-100",
+    badge: "Signal unavailable",
+  },
+};
 
-  const getPos = () => {
-    switch(direction) {
-      case 'left': return { x: -40, y: 0, rotate: -90 };
-      case 'right': return { x: 40, y: 0, rotate: 90 };
-      case 'up': return { x: 0, y: -40, rotate: 0 };
-      case 'down': return { x: 0, y: 40, rotate: 180 };
-      default: return { x: 0, y: 0, rotate: 0 };
-    }
-  };
-
-  const pos = getPos();
+function GazeIndicator({ direction = "center" }) {
+  const rawKey = (direction || "unknown").toLowerCase();
+  const key = rawKey === "up" || rawKey === "down" ? "center" : rawKey;
+  const current = DIRECTION_CONFIG[key] || DIRECTION_CONFIG.unknown;
+  const Icon = current.icon;
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 relative h-48">
-      {/* HUD Outer Ring */}
-      <div className="absolute inset-0 border-2 border-dashed border-blue-200 rounded-full animate-[spin_10s_linear_infinite]" />
-      
-      {/* Compass / HUD Elements */}
-      <div className="relative w-32 h-32 flex items-center justify-center rounded-full border border-blue-100 bg-white shadow-soft">
-        {/* Directional markers */}
-        <div className="absolute top-2 w-1 h-3 bg-blue-300 rounded-full" />
-        <div className="absolute bottom-2 w-1 h-3 bg-blue-300 rounded-full" />
-        <div className="absolute left-2 w-3 h-1 bg-blue-300 rounded-full" />
-        <div className="absolute right-2 w-3 h-1 bg-blue-300 rounded-full" />
+    <article className="premium-card p-5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+        Gaze Indicator
+      </p>
 
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={direction}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ 
-              opacity: 1, 
-              scale: 1, 
-              x: pos.x, 
-              y: pos.y,
-              rotate: pos.rotate
-            }}
-            exit={{ opacity: 0, scale: 0.5 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className={`flex items-center justify-center w-12 h-12 rounded-xl shadow-lg border-2 z-10 
-              ${isCenter ? "bg-emerald-500 border-emerald-400 text-white" : 
-                isUnknown ? "bg-slate-200 border-slate-300 text-slate-500" : 
-                "bg-blue-600 border-blue-500 text-white"}`}
+      <div className="mt-4 rounded-xl border border-slate-700/70 bg-slate-900/55 p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-xl border ${current.iconClass}`}
+            >
+              <Icon size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-slate-100">{current.title}</h3>
+              <p className="text-sm text-slate-300">{current.subtitle}</p>
+            </div>
+          </div>
+          <span
+            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${current.badgeClass}`}
           >
-            {isCenter ? <Focus size={24} /> : <Eye size={24} />}
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Center Target Point */}
-        <div className={`w-2 h-2 rounded-full ${isCenter ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)]" : "bg-blue-100"}`} />
+            {current.badge}
+          </span>
+        </div>
       </div>
-
-      <div className="mt-8 flex flex-col items-center">
-        <span className={`text-[10px] font-black uppercase tracking-[0.2em] mb-1 
-          ${isCenter ? "text-emerald-600" : isUnknown ? "text-slate-500" : "text-blue-600"}`}>
-          Position Tracking
-        </span>
-        <span className="text-xl font-black text-slate-900 tracking-tight capitalize">
-          {direction === "center" ? "Locked Center" : direction}
-        </span>
-      </div>
-    </div>
+    </article>
   );
-};
+}
 
 export default GazeIndicator;

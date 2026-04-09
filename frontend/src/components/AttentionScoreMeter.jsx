@@ -1,95 +1,83 @@
-import React from 'react';
-import { Activity, ShieldCheck, ShieldAlert, Shield } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ShieldAlert, ShieldCheck, ShieldX } from "lucide-react";
+import { Badge } from "./ui/Badge";
+import { Progress } from "./ui/Progress";
 
-const AttentionScoreMeter = ({ score }) => {
-  // Determine color and icon based on score
-  let colorClass = "text-emerald-500 from-emerald-400 to-teal-600";
+function AttentionScoreMeter({ score = 100 }) {
+  const parsedScore = Number(score);
+  const numericScore = Number.isFinite(parsedScore)
+    ? Math.max(0, Math.min(100, parsedScore))
+    : 0;
+
+  let status = "success";
+  let label = "Stable";
+  let color = "text-emerald-200";
+  let progressColor = "bg-gradient-to-r from-emerald-500 to-teal-400";
+  let description = "Attention profile is stable and within expected bounds.";
+  let bandLabel = "80-100: Stable";
+  let bandClass = "border-emerald-500/40 bg-emerald-500/15 text-emerald-100";
+  let iconClass = "border-emerald-500/35 bg-emerald-500/15 text-emerald-200";
   let Icon = ShieldCheck;
-  let statusLabel = "Secure";
-  
-  if (score < 50) {
-    colorClass = "text-rose-500 from-rose-400 to-red-600";
+
+  if (numericScore < 50) {
+    status = "destructive";
+    label = "Critical";
+    color = "text-red-200";
+    progressColor = "bg-gradient-to-r from-red-600 to-red-500";
+    description = "Critical degradation in attention confidence.";
+    bandLabel = "0-49: Critical";
+    bandClass = "border-red-500/40 bg-red-500/15 text-red-100";
+    iconClass = "border-red-500/35 bg-red-500/15 text-red-200";
+    Icon = ShieldX;
+  } else if (numericScore < 80) {
+    status = "warning";
+    label = "Watch";
+    color = "text-amber-200";
+    progressColor = "bg-gradient-to-r from-amber-500 to-orange-400";
+    description = "Monitoring suggests periodic focus drift.";
+    bandLabel = "50-79: Review";
+    bandClass = "border-amber-500/40 bg-amber-500/15 text-amber-100";
+    iconClass = "border-amber-500/35 bg-amber-500/15 text-amber-200";
     Icon = ShieldAlert;
-    statusLabel = "Critical";
-  } else if (score < 80) {
-    colorClass = "text-amber-500 from-amber-400 to-orange-600";
-    Icon = Shield;
-    statusLabel = "Warning";
   }
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="flex items-center gap-2 mb-8">
-        <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
-          <Activity size={20} />
+    <article className="premium-card p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Primary Metric
+          </p>
+          <h3 className="text-lg font-semibold text-slate-100">Attention Confidence</h3>
         </div>
-        <h2 className="text-lg font-bold text-slate-800 tracking-tight">Integrity Index</h2>
+        <Badge variant={status} className="shadow-none">
+          {label}
+        </Badge>
       </div>
 
-      <div className="relative w-40 h-40 md:w-48 md:h-48 flex items-center justify-center">
-        {/* Decorative Outer Ring */}
-        <div className="absolute inset-0 rounded-full border border-slate-100 shadow-xl shadow-slate-200/50" />
-        
-        {/* Progress Circle SVG */}
-        <svg className="absolute inset-0 w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-          <defs>
-            <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="currentColor" stopOpacity="1" />
-              <stop offset="100%" stopColor="currentColor" stopOpacity="0.7" />
-            </linearGradient>
-          </defs>
-          <circle
-            cx="50"
-            cy="50"
-            r="44"
-            fill="transparent"
-            stroke="#f1f5f9"
-            strokeWidth="8"
-          />
-          <motion.circle
-            cx="50"
-            cy="50"
-            r="44"
-            fill="transparent"
-            stroke="url(#scoreGradient)"
-            strokeWidth="8"
-            strokeDasharray="276.5" // 2 * pi * 44
-            initial={{ strokeDashoffset: 276.5 }}
-            animate={{ strokeDashoffset: 276.5 * (1 - score / 100) }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className={`${colorClass.split(' ')[0]} transition-all duration-500`}
-            strokeLinecap="round"
-          />
-        </svg>
-
-        {/* Center Content */}
-        <div className="absolute flex flex-col items-center justify-center bg-white rounded-full w-[78%] h-[78%] border border-slate-100 shadow-sm">
-          <div className={`flex items-center gap-1 mb-1 ${colorClass.split(' ')[0]}`}>
-            <Icon size={16} />
-            <span className="text-[10px] font-black uppercase tracking-tighter">{statusLabel}</span>
+      <div className="mt-4 grid grid-cols-[1fr_auto] items-end gap-3">
+        <div>
+          <div className={`font-display text-4xl font-black tracking-tight ${color}`}>
+            {Math.round(numericScore)}
+            <span className="ml-1 text-xl text-slate-400">%</span>
           </div>
-          <span className={`text-5xl font-black tracking-tighter ${colorClass.split(' ')[0]}`}>
-            {score}
-          </span>
-          <span className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">Trust Score</span>
+          <p className="mt-1 text-sm text-slate-300">{description}</p>
+        </div>
+        <div className={`rounded-xl border p-2.5 ${iconClass}`}>
+          <Icon size={24} />
         </div>
       </div>
-      
-      <div className="mt-8 grid grid-cols-2 gap-4 w-full">
-        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col items-center">
-          <span className="text-[10px] text-slate-400 font-bold uppercase mb-1">Status</span>
-          <span className={`text-xs font-black uppercase ${colorClass.split(' ')[0]}`}>{statusLabel}</span>
-        </div>
-        <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 flex flex-col items-center">
-          <span className="text-[10px] text-slate-400 font-bold uppercase mb-1">Level</span>
-          <span className="text-xs font-black uppercase text-slate-800">
-            {score > 90 ? "Prime" : score > 60 ? "Valid" : "Risk"}
-          </span>
-        </div>
+
+      <div className="mt-4">
+        <Progress value={numericScore} color={progressColor} className="h-2.5" />
       </div>
-    </div>
+
+      <div
+        className={`mt-3 inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${bandClass}`}
+      >
+        {bandLabel}
+      </div>
+    </article>
   );
-};
+}
 
 export default AttentionScoreMeter;

@@ -151,14 +151,22 @@ def _mean_landmark(landmarks, indices):
     return x, y
 
 
+def _safe_mean_landmark(landmarks, indices):
+    if not indices:
+        return None
+    if max(indices) >= len(landmarks):
+        return None
+    return _mean_landmark(landmarks, indices)
+
+
 def estimate_gaze_from_landmarks(landmarks, nose_ratios):
     nose_ratio_h, nose_ratio_v = nose_ratios
     
     # If iris landmarks are unavailable, use head yaw/pitch as fallback signals.
     if len(landmarks) < 478:
-        if nose_ratio < 0.42:
+        if nose_ratio_h < 0.42:
             return "left", 0.45, (0.35, 0.5)
-        if nose_ratio > 0.58:
+        if nose_ratio_h > 0.58:
             return "right", 0.45, (0.65, 0.5)
         return "center", 0.4, (0.5, 0.5)
 
@@ -198,19 +206,18 @@ def estimate_gaze_from_landmarks(landmarks, nose_ratios):
     h_offset = h_ratio - 0.5
     v_offset = v_ratio - 0.5
 
-    # Merge eye-driven cue with head pose cue for stability.
+    # Merge eye-driven cue with head yaw cue for stability.
     yaw_offset = nose_ratio_h - 0.5
-    pitch_offset = nose_ratio_v - 0.45  # Neutral pitch is slightly offset
     
     combined_h = (0.75 * h_offset) + (0.25 * yaw_offset)
-    combined_v = (0.75 * v_offset) + (0.25 * pitch_offset)
 
     if abs(combined_h) < 0.06 and abs(v_offset) < 0.08:
         return "center", 0.75, (iris_center_x, iris_center_y)
 
-    if abs(combined_h) >= abs(v_offset):
+    # Horizontal-only direction mode: no up/down outputs.
+    if abs(combined_h) >= 0.06:
         return ("right" if combined_h > 0 else "left"), 0.8, (iris_center_x, iris_center_y)
-    return ("down" if v_offset > 0 else "up"), 0.7, (iris_center_x, iris_center_y)
+    return "center", 0.6, (iris_center_x, iris_center_y)
 
 def process_frame(b64_image):
     try:
@@ -246,6 +253,9 @@ def process_frame(b64_image):
                 "head_pose": head_pose,
                 "nose_ratio": float(nose_ratio[0]),
                 "nose_ratio_v": float(nose_ratio[1]),
+                "pose_vector": [float(v) for v in pose_vector],
+                "left_eye_box": left_box,
+                "right_eye_box": right_box,
             }
         
         # convert to grayscale, resize, scale
@@ -260,25 +270,44 @@ def process_frame(b64_image):
         left_tensor = preprocess(left_eye_img)
         right_tensor = preprocess(right_eye_img)
 
-        r_iris_x, r_iris_y = _mean_landmark(landmarks, RIGHT_IRIS_INDICES)
-        l_iris_x, l_iris_y = _mean_landmark(landmarks, LEFT_IRIS_INDICES)
+        right_iris = _safe_mean_landmark(landmarks, RIGHT_IRIS_INDICES)
+        left_iris = _safe_mean_landmark(landmarks, LEFT_IRIS_INDICES)
 
-        l_center_x, l_center_y = _mean_landmark(landmarks, LEFT_EYE_INDICES)
-        r_center_x, r_center_y = _mean_landmark(landmarks, RIGHT_EYE_INDICES)
+        left_eye_center = _safe_mean_landmark(landmarks, LEFT_EYE_INDICES)
+        right_eye_center = _safe_mean_landmark(landmarks, RIGHT_EYE_INDICES)
 
         meta = {
             "head_pose": head_pose,
             "nose_ratio": float(nose_ratio[0]),
             "nose_ratio_v": float(nose_ratio[1]),
+            "pose_vector": [float(v) for v in pose_vector],
             "heuristic_direction": heuristic_direction,
             "heuristic_confidence": float(heuristic_confidence),
-            "heuristic_vector": (meta_heuristic_vec if 'meta_heuristic_vec' in locals() else [0.0, 0.0]),
+            "heuristic_vector": [float(iris_center[0] - 0.5), float(0.5 - iris_center[1])],
             "iris_center_x": float(iris_center[0]),
             "iris_center_y": float(iris_center[1]),
             "left_eye_box": left_box,
             "right_eye_box": right_box,
-            "left_iris": [float(l_iris_x), float(1.0 - l_iris_y)],
-            "right_iris": [float(r_iris_x), float(1.0 - r_iris_y)],
+            "left_iris": (
+                [float(left_iris[0]), float(1.0 - left_iris[1])]
+                if left_iris
+                else None
+            ),
+            "right_iris": (
+                [float(right_iris[0]), float(1.0 - right_iris[1])]
+                if right_iris
+                else None
+            ),
+            "left_eye_center": (
+                [float(left_eye_center[0]), float(1.0 - left_eye_center[1])]
+                if left_eye_center
+                else None
+            ),
+            "right_eye_center": (
+                [float(right_eye_center[0]), float(1.0 - right_eye_center[1])]
+                if right_eye_center
+                else None
+            ),
         }
         
         return left_tensor, right_tensor, None, meta

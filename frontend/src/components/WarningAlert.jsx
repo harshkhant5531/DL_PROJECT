@@ -1,74 +1,83 @@
-import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, AlertTriangle, ShieldCheck, Zap } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, ShieldAlert } from "lucide-react";
 
-const severityStyle = {
+const ALERT_STYLE = {
+  safe: {
+    icon: CheckCircle2,
+    title: "System Normal",
+    message: "Session stable. No suspicious pattern detected.",
+    accent: "border-l-emerald-400/65",
+    badge: "border-emerald-500/45 bg-emerald-500/15 text-emerald-100",
+    iconWrap: "border-emerald-500/35 bg-emerald-500/15 text-emerald-200",
+  },
   low: {
-    wrapper: "bg-blue-50/50 border-blue-100 text-blue-900",
-    icon: ShieldCheck,
-    iconClass: "text-blue-600",
-    glow: "shadow-blue-500/5",
+    icon: Info,
+    title: "Low Risk",
+    message: "Light deviation observed. Continue monitoring.",
+    accent: "border-l-sky-400/65",
+    badge: "border-sky-500/40 bg-sky-500/15 text-sky-100",
+    iconWrap: "border-sky-500/35 bg-sky-500/15 text-sky-200",
   },
   medium: {
-    wrapper: "bg-amber-50 border-amber-200 text-amber-900",
-    icon: AlertTriangle,
-    iconClass: "text-amber-600",
-    glow: "shadow-amber-500/10",
+    icon: ShieldAlert,
+    title: "Medium Risk",
+    message: "Suspicious gaze pattern detected.",
+    accent: "border-l-amber-400/65",
+    badge: "border-amber-500/45 bg-amber-500/15 text-amber-100",
+    iconWrap: "border-amber-500/35 bg-amber-500/15 text-amber-200",
   },
   high: {
-    wrapper: "bg-rose-50 border-rose-200 text-rose-900",
     icon: AlertCircle,
-    iconClass: "text-rose-600 animate-pulse",
-    glow: "shadow-rose-500/20",
+    title: "High Risk",
+    message: "Critical integrity signal triggered.",
+    accent: "border-l-red-400/65",
+    badge: "border-red-500/45 bg-red-500/15 text-red-100",
+    iconWrap: "border-red-500/35 bg-red-500/15 text-red-200",
+  },
+  unknown: {
+    icon: Info,
+    title: "Status Unavailable",
+    message: "Risk signal is temporarily unavailable.",
+    accent: "border-l-slate-400/65",
+    badge: "border-slate-500/45 bg-slate-500/15 text-slate-100",
+    iconWrap: "border-slate-500/35 bg-slate-500/15 text-slate-200",
   },
 };
 
-const WarningAlert = ({ warning, message, severity = "high" }) => {
-  const style = severityStyle[severity] || severityStyle.high;
-  const AlertIcon = style.icon;
+function WarningAlert({ warning = false, message = "", severity = "low" }) {
+  const levelKey = warning ? severity.toLowerCase() : "safe";
+  const current = ALERT_STYLE[levelKey] || ALERT_STYLE.unknown;
+  const Icon = current.icon;
+  const stateLabel = warning ? `${current.title} alert` : "No active alert";
 
   return (
-    <div className="relative overflow-hidden rounded-2xl">
-      <AnimatePresence mode="wait">
-        {warning ? (
-          <motion.div
-            key={`warning-${severity}`}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            className={`flex items-center gap-4 p-5 border backdrop-blur-md shadow-2xl transition-all ${style.wrapper} ${style.glow}`}
-          >
-            <div className={`p-2 rounded-xl bg-white/5 border border-white/5 ${style.iconClass}`}>
-              <AlertIcon size={24} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50 mb-1">Warning Delta</span>
-              <span className="font-bold text-sm tracking-tight">{message}</span>
-            </div>
-            <div className="ml-auto">
-              <Zap size={14} className="opacity-20 translate-x-1" />
-            </div>
-          </motion.div>
-        ) : (
-          <motion.div
-            key="safe"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.05 }}
-            className="flex items-center gap-4 p-5 bg-emerald-50 border border-emerald-100 text-emerald-900 backdrop-blur-md shadow-lg shadow-emerald-500/5"
-          >
-            <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600">
-              <ShieldCheck size={24} />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 mb-1 text-emerald-700">Status Protocol</span>
-              <span className="font-bold text-sm tracking-tight">System Secure — Eyes on Target</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
+    <article
+      role={warning ? "alert" : "status"}
+      aria-live={warning ? "assertive" : "polite"}
+      className={`premium-card border-l-4 p-4 md:p-5 ${current.accent}`}
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className={`rounded-lg border p-2 ${current.iconWrap}`}>
+            <Icon size={18} />
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+              Alert Status
+            </p>
+            <h3 className="mt-1 text-base font-semibold text-slate-100">{current.title}</h3>
+            <p className="mt-1 text-sm leading-relaxed text-slate-300">
+              {message || current.message}
+            </p>
+          </div>
+        </div>
+        <span
+          className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${current.badge}`}
+        >
+          {stateLabel}
+        </span>
+      </div>
+    </article>
   );
-};
+}
 
 export default WarningAlert;
